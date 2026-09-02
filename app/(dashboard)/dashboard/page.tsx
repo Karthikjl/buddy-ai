@@ -228,7 +228,7 @@ export default function DashboardPage() {
             <CheckCircle2 size={20} color="#10b981" />
             <div style={{ fontSize: "0.9rem" }}>
               <span style={{ color: "var(--text-muted)" }}>Active Provider: </span>
-              <strong style={{ color: "#fff", textTransform: "capitalize" }}>{activeKey.provider}</strong>
+              <strong style={{ color: "var(--text-main)", textTransform: "capitalize" }}>{activeKey.provider}</strong>
               <span style={{ margin: "0 8px", color: "var(--border-subtle)" }}>•</span>
               <span style={{ color: "var(--text-muted)" }}>Model: </span>
               <span className="badge badge-cyan">{activeKey.model}</span>

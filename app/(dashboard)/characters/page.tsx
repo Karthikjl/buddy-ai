@@ -261,7 +261,7 @@ export default function CharactersPage() {
                   width: "56px",
                   height: "56px",
                   borderRadius: "16px",
-                  background: "rgba(255,255,255,0.05)",
+                  background: "var(--primary-light)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -319,14 +319,16 @@ export default function CharactersPage() {
 
             <div
               style={{
-                backgroundColor: "rgba(0,0,0,0.2)",
-                padding: "10px 12px",
+                backgroundColor: "var(--quote-bg, rgba(255, 255, 255, 0.04))",
+                padding: "12px 14px",
                 borderRadius: "var(--radius-sm)",
-                fontSize: "0.8rem",
-                color: "var(--text-faint)",
+                fontSize: "0.83rem",
+                color: "var(--text-muted)",
+                lineHeight: 1.45,
                 fontStyle: "italic",
                 marginBottom: "20px",
-                borderLeft: "2px solid var(--primary)",
+                border: "1px solid var(--border-subtle)",
+                borderLeft: "3px solid var(--primary)",
               }}
             >
               "{char.greeting.slice(0, 85)}..."

@@ -490,7 +490,7 @@ export default function ChatPage() {
           justifyContent: "space-between",
           padding: "12px 28px",
           borderBottom: "1px solid var(--border-subtle)",
-          backgroundColor: "rgba(15, 23, 42, 0.8)",
+          backgroundColor: "var(--header-bg)",
           backdropFilter: "blur(12px)",
           zIndex: 30,
           flexWrap: "wrap",
@@ -560,9 +560,9 @@ export default function ChatPage() {
                       padding: "2px 8px",
                       fontSize: "0.8rem",
                       borderRadius: "4px",
-                      backgroundColor: "rgba(255,255,255,0.1)",
+                      backgroundColor: "var(--bg-input)",
                       border: "1px solid var(--primary)",
-                      color: "#fff",
+                      color: "var(--text-main)",
                       outline: "none",
                     }}
                   />
@@ -598,9 +598,9 @@ export default function ChatPage() {
                   value={currentMood}
                   onChange={(e) => handleMoodChange(e.target.value)}
                   style={{
-                    backgroundColor: "rgba(99, 102, 241, 0.12)",
-                    border: "1px solid rgba(99, 102, 241, 0.3)",
-                    color: "#a5b4fc",
+                    backgroundColor: "var(--primary-light)",
+                    border: "1px solid var(--border-glow)",
+                    color: "var(--primary)",
                     fontSize: "0.72rem",
                     fontWeight: 600,
                     borderRadius: "var(--radius-full)",
@@ -610,7 +610,7 @@ export default function ChatPage() {
                   }}
                 >
                   {MOOD_OPTIONS.map((m) => (
-                    <option key={m.id} value={m.id} style={{ background: "#0f172a", color: "#fff" }}>
+                    <option key={m.id} value={m.id} style={{ background: "var(--bg-surface)", color: "var(--text-main)" }}>
                       {m.label}
                     </option>
                   ))}
@@ -624,9 +624,9 @@ export default function ChatPage() {
                   value={currentRelationship}
                   onChange={(e) => handleRelationshipChange(e.target.value)}
                   style={{
-                    backgroundColor: "rgba(6, 182, 212, 0.12)",
-                    border: "1px solid rgba(6, 182, 212, 0.3)",
-                    color: "#67e8f9",
+                    backgroundColor: "var(--accent-light)",
+                    border: "1px solid var(--border-subtle)",
+                    color: "var(--accent)",
                     fontSize: "0.72rem",
                     fontWeight: 600,
                     borderRadius: "var(--radius-full)",
@@ -636,7 +636,7 @@ export default function ChatPage() {
                   }}
                 >
                   {RELATIONSHIP_OPTIONS.map((r) => (
-                    <option key={r.id} value={r.id} style={{ background: "#0f172a", color: "#fff" }}>
+                    <option key={r.id} value={r.id} style={{ background: "var(--bg-surface)", color: "var(--text-main)" }}>
                       {r.label}
                     </option>
                   ))}
@@ -933,7 +933,7 @@ export default function ChatPage() {
         style={{
           padding: "16px 28px 24px 28px",
           borderTop: "1px solid var(--border-subtle)",
-          backgroundColor: "rgba(15, 23, 42, 0.8)",
+          backgroundColor: "var(--footer-bg)",
           backdropFilter: "blur(12px)",
           zIndex: 20,
         }}
@@ -1090,8 +1090,9 @@ export default function ChatPage() {
                       borderRadius: "var(--radius-full)",
                       textTransform: "capitalize",
                       background: newMemoryCategory === cat ? "var(--primary-light)" : "rgba(255,255,255,0.04)",
-                      border: newMemoryCategory === cat ? "1px solid var(--primary)" : "1px solid var(--border-subtle)",
-                      color: newMemoryCategory === cat ? "#fff" : "var(--text-muted)",
+                      border: newMemoryCategory === cat ? "1.5px solid var(--primary)" : "1px solid var(--border-subtle)",
+                      color: newMemoryCategory === cat ? "var(--primary)" : "var(--text-muted)",
+                      fontWeight: newMemoryCategory === cat ? 700 : 500,
                     }}
                   >
                     {cat}

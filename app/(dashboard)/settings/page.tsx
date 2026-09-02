@@ -306,8 +306,8 @@ export default function SettingsPage() {
                     fontSize: "0.85rem",
                     fontWeight: 600,
                     background: selectedPreset === p.id ? "var(--primary-light)" : "rgba(255,255,255,0.04)",
-                    border: selectedPreset === p.id ? "1px solid var(--primary)" : "1px solid var(--border-subtle)",
-                    color: selectedPreset === p.id ? "#fff" : "var(--text-muted)",
+                    border: selectedPreset === p.id ? "1.5px solid var(--primary)" : "1px solid var(--border-subtle)",
+                    color: selectedPreset === p.id ? "var(--primary)" : "var(--text-muted)",
                   }}
                 >
                   {p.name}
@@ -497,33 +497,150 @@ export default function SettingsPage() {
               Tailor the color palette of your companion workspace.
             </p>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px" }}>
               {[
-                { id: "midnight", name: "Midnight Navy", bg: "#080c16", accent: "#6366f1" },
-                { id: "obsidian", name: "Cyber Obsidian", bg: "#050608", accent: "#06b6d4" },
-                { id: "amethyst", name: "Neon Amethyst", bg: "#0b0614", accent: "#a855f7" },
-                { id: "emerald", name: "Aurora Emerald", bg: "#05100d", accent: "#10b981" },
+                {
+                  id: "pearl",
+                  name: "Pure Pearl White",
+                  mode: "Clean Light",
+                  bg: "#f8fafc",
+                  cardBg: "#ffffff",
+                  userBubble: "linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)",
+                  aiBubble: "#ffffff",
+                  accent: "#4f46e5",
+                  isLight: true,
+                },
+                {
+                  id: "midnight",
+                  name: "Midnight Navy",
+                  mode: "Default Dark",
+                  bg: "#080c16",
+                  cardBg: "#0f172a",
+                  userBubble: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
+                  aiBubble: "rgba(26, 36, 61, 0.9)",
+                  accent: "#6366f1",
+                  isLight: false,
+                },
+                {
+                  id: "obsidian",
+                  name: "Cyber Obsidian",
+                  mode: "OLED Black",
+                  bg: "#050608",
+                  cardBg: "#0c0e12",
+                  userBubble: "linear-gradient(135deg, #06b6d4 0%, #0284c7 100%)",
+                  aiBubble: "rgba(20, 24, 34, 0.9)",
+                  accent: "#06b6d4",
+                  isLight: false,
+                },
+                {
+                  id: "amethyst",
+                  name: "Neon Amethyst",
+                  mode: "Purple Dream",
+                  bg: "#0b0614",
+                  cardBg: "#140b22",
+                  userBubble: "linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)",
+                  aiBubble: "rgba(36, 21, 61, 0.9)",
+                  accent: "#a855f7",
+                  isLight: false,
+                },
+                {
+                  id: "emerald",
+                  name: "Aurora Emerald",
+                  mode: "Cyber Forest",
+                  bg: "#05100d",
+                  cardBg: "#0a1b16",
+                  userBubble: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  aiBubble: "rgba(18, 44, 36, 0.9)",
+                  accent: "#10b981",
+                  isLight: false,
+                },
               ].map((t) => (
                 <button
                   key={t.id}
                   onClick={() => setTheme(t.id)}
                   style={{
-                    padding: "16px",
+                    padding: "12px",
                     borderRadius: "var(--radius-md)",
-                    backgroundColor: t.bg,
+                    backgroundColor: "var(--bg-card)",
                     border: theme === t.id ? `2px solid ${t.accent}` : "1px solid var(--border-subtle)",
+                    boxShadow: theme === t.id ? `0 0 18px ${t.accent}30` : "none",
+                    cursor: "pointer",
                     display: "flex",
                     flexDirection: "column",
-                    alignItems: "flex-start",
                     gap: "10px",
-                    boxShadow: theme === t.id ? `0 0 16px ${t.accent}40` : "none",
+                    textAlign: "left",
+                    transition: "all 0.2s ease",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
-                    <div style={{ width: "16px", height: "16px", borderRadius: "50%", backgroundColor: t.accent }} />
-                    {theme === t.id && <Check size={16} color={t.accent} />}
+                  {/* Mini Preview Window */}
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "64px",
+                      borderRadius: "8px",
+                      backgroundColor: t.bg,
+                      border: `1px solid ${t.isLight ? "#e2e8f0" : "rgba(255,255,255,0.1)"}`,
+                      padding: "8px",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                        <div style={{ width: "7px", height: "7px", borderRadius: "50%", backgroundColor: t.accent }} />
+                        <div style={{ width: "22px", height: "5px", borderRadius: "3px", backgroundColor: t.isLight ? "#cbd5e1" : "rgba(255,255,255,0.2)" }} />
+                      </div>
+                      <div
+                        style={{
+                          width: "32px",
+                          height: "11px",
+                          borderRadius: "4px",
+                          background: t.userBubble,
+                        }}
+                      />
+                    </div>
+
+                    <div
+                      style={{
+                        width: "68%",
+                        height: "12px",
+                        borderRadius: "4px",
+                        backgroundColor: t.aiBubble,
+                        border: `1px solid ${t.isLight ? "#e2e8f0" : "rgba(255,255,255,0.12)"}`,
+                      }}
+                    />
                   </div>
-                  <span style={{ fontWeight: 600, fontSize: "0.9rem", color: "#fff" }}>{t.name}</span>
+
+                  {/* Label & Active Check */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", marginTop: "2px" }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: "0.86rem", color: "var(--text-main)" }}>
+                        {t.name}
+                      </div>
+                      <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "1px" }}>
+                        {t.mode}
+                      </div>
+                    </div>
+                    {theme === t.id && (
+                      <div
+                        style={{
+                          width: "20px",
+                          height: "20px",
+                          borderRadius: "50%",
+                          backgroundColor: t.accent,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#ffffff",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <Check size={12} strokeWidth={3} />
+                      </div>
+                    )}
+                  </div>
                 </button>
               ))}
             </div>
