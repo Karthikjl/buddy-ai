@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
+import Logo from "@/components/Logo";
 import {
   Sparkles,
   LayoutDashboard,
@@ -145,39 +146,7 @@ export default function Sidebar() {
             textDecoration: "none",
           }}
         >
-          <div
-            style={{
-              width: "38px",
-              height: "38px",
-              borderRadius: "12px",
-              background: "linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#fff",
-              boxShadow: "0 0 16px var(--primary-light)",
-            }}
-          >
-            <Sparkles size={20} />
-          </div>
-          <div>
-            <div
-              style={{
-                fontFamily: "var(--font-display)",
-                fontWeight: 700,
-                fontSize: "1.25rem",
-                letterSpacing: "-0.02em",
-                background: "linear-gradient(90deg, var(--text-main) 40%, var(--accent) 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}
-            >
-              BuddyAi
-            </div>
-            <div style={{ fontSize: "0.72rem", color: "var(--text-faint)" }}>
-              Private Companion Hub
-            </div>
-          </div>
+          <Logo size={36} withText={true} subtitle="Private Companion Hub" />
         </Link>
 
         {/* Primary Navigation */}

@@ -235,7 +235,35 @@ export default function CharactersPage() {
           gap: "20px",
         }}
       >
-        {filteredCharacters.map((char) => (
+        {loading ? (
+          [1, 2, 3, 4, 5, 6].map((n) => (
+            <div
+              key={n}
+              className="glass-panel"
+              style={{
+                padding: "24px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "14px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div className="skeleton" style={{ width: "56px", height: "56px", borderRadius: "16px" }} />
+                <div className="skeleton" style={{ width: "64px", height: "20px", borderRadius: "999px" }} />
+              </div>
+              <div className="skeleton" style={{ width: "130px", height: "20px" }} />
+              <div className="skeleton" style={{ width: "90px", height: "14px" }} />
+              <div className="skeleton" style={{ width: "100%", height: "40px" }} />
+              <div className="skeleton" style={{ width: "100%", height: "36px", borderRadius: "4px" }} />
+              <div className="skeleton" style={{ width: "100%", height: "40px", borderRadius: "var(--radius-md)", marginTop: "auto" }} />
+            </div>
+          ))
+        ) : filteredCharacters.length === 0 ? (
+          <div style={{ gridColumn: "1 / -1", padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
+            No companion characters found.
+          </div>
+        ) : (
+          filteredCharacters.map((char) => (
           <div
             key={char.id}
             className="glass-panel glass-panel-hover"
@@ -344,7 +372,8 @@ export default function CharactersPage() {
               <span>{startingChatId === char.id ? "Opening..." : "Start Conversation"}</span>
             </button>
           </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* Create Custom Character Modal */}

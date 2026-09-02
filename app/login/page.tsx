@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Sparkles, ArrowRight, ShieldCheck, Cpu } from "lucide-react";
+import Logo from "@/components/Logo";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -91,21 +92,7 @@ export default function LoginPage() {
             marginBottom: "20px",
           }}
         >
-          <div
-            style={{
-              width: "52px",
-              height: "52px",
-              borderRadius: "16px",
-              background: "linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 0 24px var(--primary-light)",
-              color: "#fff",
-            }}
-          >
-            <Sparkles size={26} />
-          </div>
+          <Logo size={56} />
         </div>
 
         <h1

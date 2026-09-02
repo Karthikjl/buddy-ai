@@ -156,7 +156,24 @@ export default function DashboardPage() {
       </div>
 
       {/* API Key Status Notice */}
-      {!activeKey ? (
+      {loading ? (
+        <div
+          className="glass-panel"
+          style={{
+            padding: "16px 24px",
+            marginBottom: "32px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+            <div className="skeleton" style={{ width: "20px", height: "20px", borderRadius: "50%" }} />
+            <div className="skeleton" style={{ width: "240px", height: "18px" }} />
+          </div>
+          <div className="skeleton" style={{ width: "130px", height: "16px" }} />
+        </div>
+      ) : !activeKey ? (
         <div
           className="glass-panel"
           style={{
@@ -274,7 +291,29 @@ export default function DashboardPage() {
             gap: "18px",
           }}
         >
-          {characters.slice(0, 4).map((char) => (
+          {loading ? (
+            [1, 2, 3, 4].map((n) => (
+              <div
+                key={n}
+                className="glass-panel"
+                style={{
+                  padding: "20px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div className="skeleton" style={{ width: "48px", height: "48px", borderRadius: "14px" }} />
+                  <div className="skeleton" style={{ width: "64px", height: "20px", borderRadius: "999px" }} />
+                </div>
+                <div className="skeleton" style={{ width: "110px", height: "18px" }} />
+                <div className="skeleton" style={{ width: "100%", height: "36px" }} />
+                <div className="skeleton" style={{ width: "100%", height: "36px", borderRadius: "var(--radius-md)", marginTop: "auto" }} />
+              </div>
+            ))
+          ) : (
+            characters.slice(0, 4).map((char) => (
             <div
               key={char.id}
               className="glass-panel glass-panel-hover"
@@ -323,7 +362,8 @@ export default function DashboardPage() {
                 <span>{startingChatId === char.id ? "Launching..." : `Chat with ${char.name}`}</span>
               </button>
             </div>
-          ))}
+          ))
+        )}
 
           {/* Create Custom Character Card */}
           <Link
@@ -380,7 +420,28 @@ export default function DashboardPage() {
           Recent Conversations
         </h2>
 
-        {recentSessions.length === 0 ? (
+        {loading ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {[1, 2].map((i) => (
+              <div
+                key={i}
+                className="glass-panel"
+                style={{
+                  padding: "16px 20px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "14px",
+                }}
+              >
+                <div className="skeleton" style={{ width: "42px", height: "42px", borderRadius: "50%" }} />
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <div className="skeleton" style={{ width: "160px", height: "16px" }} />
+                  <div className="skeleton" style={{ width: "240px", height: "12px" }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : recentSessions.length === 0 ? (
           <div
             className="glass-panel"
             style={{

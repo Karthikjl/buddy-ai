@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import Logo from "@/components/Logo";
 import { Sparkles, ArrowRight, Shield, Cpu, MessageSquare, Bot, Zap, HeartHandshake } from "lucide-react";
 
 export default function LandingPage() {
@@ -55,34 +56,7 @@ export default function LandingPage() {
           zIndex: 40,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <div
-            style={{
-              width: "36px",
-              height: "36px",
-              borderRadius: "10px",
-              background: "linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#fff",
-            }}
-          >
-            <Sparkles size={18} />
-          </div>
-          <span
-            style={{
-              fontFamily: "var(--font-display)",
-              fontWeight: 700,
-              fontSize: "1.25rem",
-              background: "linear-gradient(90deg, #fff, var(--accent))",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            BuddyAi
-          </span>
-        </div>
+        <Logo size={36} withText={true} />
 
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
           <Link href="/login" prefetch={false} className="btn-secondary" style={{ padding: "8px 18px", fontSize: "0.88rem" }}>
