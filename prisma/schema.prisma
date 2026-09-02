@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String          @id @default(uuid())
+  email        String          @unique
+  name         String?
+  passwordHash String
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  apiKeys      ApiKey[]
+  characters   Character[]
+  chatSessions ChatSession[]
+  preferences  UserPreference?
+}
+
+model ApiKey {
+  id           String   @id @default(uuid())
+  userId       String
+  provider     String   // openai, openrouter, groq, deepseek, ollama, custom
+  label        String?  // e.g. "My OpenRouter Key"
+  baseUrl      String   // e.g. https://openrouter.ai/api/v1 or https://api.openai.com/v1
+  encryptedKey String   // AES-256-GCM cipher text
+  iv           String   // Initialization vector
+  authTag      String   // GCM authentication tag
+  model        String   // default model e.g. "gpt-4o-mini", "llama-3.3-70b-versatile"
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Character {
+  id                String        @id @default(uuid())
+  userId            String?       // Null for system/preset characters, set for user custom characters
+  name              String
+  gender            String        @default("neutral") // male, female, neutral
+  tagline           String        // Short catchy description
+  personalityPrompt String        // Detailed persona system instructions
+  avatarUrl         String?       // Image or avatar identifier
+  greeting          String        // Initial message sent by character
+  mood              String?       @default("friendly") // friendly, witty, empathetic, flirty, focused
+  relationship      String?       @default("friend")   // friend, best friend, mentor, companion
+  isDefault         Boolean       @default(false)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  user              User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatSessions      ChatSession[]
+}
+
+model ChatSession {
+  id          String    @id @default(uuid())
+  userId      String
+  characterId String
+  title       String    @default("New Conversation")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  messages    Message[]
+}
+
+model Message {
+  id        String      @id @default(uuid())
+  sessionId String
+  role      String      // user, assistant, system
+  content   String
+  createdAt DateTime    @default(now())
+
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model UserPreference {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  theme       String   @default("midnight") // midnight, obsidian, cyber, rose
+  fontStyle   String   @default("sans")     // sans, serif, mono
+  bubbleStyle String   @default("modern")   // modern, rounded, glass
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
