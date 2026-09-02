@@ -30,6 +30,8 @@ dev.db-shm
 *.db-shm
 /prisma/*.db
 /prisma/*.db-journal
+/data/
+data/
 
 # Environment & Secrets (NEVER COMMIT KEYS OR DB CREDENTIALS)
 .env

@@ -53,7 +53,7 @@ async function main() {
       gender: "female",
       tagline: "Empathetic confidante & thoughtful life mentor",
       avatarUrl: "🌸",
-      greeting: "Hello there. I'm so glad you stopped by. Take a deep breath—how is your heart feeling right now?",
+      greeting: "Hello there. I'm so glad you stopped by. Take a deep breath-how is your heart feeling right now?",
       mood: "empathetic",
       relationship: "mentor",
       isDefault: true,

@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  buddyai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: buddyai-app
+    restart: unless-stopped
+    ports:
+      - "3005:3005"
+    environment:
+      # Database: Persistent SQLite file stored inside the mounted data volume
+      - DATABASE_URL=file:/app/data/dev.db
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3005}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-buddyai_super_secret_session_key_replace_in_prod}
+      - ENCRYPTION_SECRET=${ENCRYPTION_SECRET:-buddyai_aes_256_secret_key_32bytes}
+      - LOCAL_WEBHOOK_URL=http://localhost:3005/api/telegram/webhook
+      # Set to "true" to automatically run the Telegram bot poller daemon in the container
+      - ENABLE_TELEGRAM_BOT=true
+      - NODE_ENV=production
+    volumes:
+      # Persistent volume for SQLite database and uploaded media
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3005/api/auth/session"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  buddyai_data:
+    driver: local

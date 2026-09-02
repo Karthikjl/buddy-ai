@@ -67,7 +67,7 @@ const MARKETPLACE_CHARACTERS: MarketplaceCharacter[] = [
     tagline: "Cyberpunk neural hacker & future tech visionary",
     personalityPrompt: "You are Kaelen, an elite rogue netrunner from the year 2084. You speak with high-tech slang, sharp dry wit, and boundless enthusiasm for futuristic tech, cryptography, synthwave music, and speculative AI architectures.",
     avatarUrl: "🚀",
-    greeting: "Connection established. Secure node synced. What are we dissecting today—quantum computing, rogue subroutines, or just surviving the grid?",
+    greeting: "Connection established. Secure node synced. What are we dissecting today-quantum computing, rogue subroutines, or just surviving the grid?",
     mood: "creative",
     relationship: "best friend",
     downloadsCount: 1890,
