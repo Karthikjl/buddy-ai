@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { decryptApiKey } from "@/lib/crypto";
 import { streamChatCompletion, ChatMessage } from "@/lib/llm/client";
+import { getRelevantMemories } from "@/lib/memory/semantic";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -162,15 +163,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // Fetch Companion Memories for this user and character
-    const companionMemories = await prisma.companionMemory.findMany({
-      where: {
-        userId: user.id,
-        characterId: chatSession.characterId,
-      },
-      take: 15,
-      orderBy: { createdAt: "desc" },
-    });
+    // Fetch relevant Companion Memories using local semantic RAG
+    const relevantMemoryLines = await getRelevantMemories(
+      user.id,
+      chatSession.characterId,
+      promptUserMessage,
+      10
+    );
 
     // Build context messages
     const history = [...chatSession.messages].reverse();
@@ -181,10 +180,10 @@ export async function POST(req: Request) {
       chatSession.activeRelationship || chatSession.character.relationship || "friend";
 
     let memoryContext = "";
-    if (companionMemories.length > 0) {
+    if (relevantMemoryLines.length > 0) {
       memoryContext =
-        "\n\n[MEMORIES ABOUT THE USER - Things you remember about them]:\n" +
-        companionMemories.map((m) => `- [${m.category.toUpperCase()}]: ${m.fact}`).join("\n") +
+        "\n\n[MEMORIES ABOUT THE USER - Contextually retrieved memories]:\n" +
+        relevantMemoryLines.join("\n") +
         "\nNaturally incorporate these memories when relevant without awkwardly announcing them.";
     }
 

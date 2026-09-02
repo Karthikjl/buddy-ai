@@ -57,6 +57,11 @@ model Character {
   mood              String?           @default("friendly") // friendly, witty, empathetic, flirty, focused, motivating
   relationship      String?           @default("friend")   // friend, best friend, mentor, companion, partner
   affinityPoints    Int               @default(0)          // Conversation depth / XP
+  voicePitch        Float?            @default(1.0)
+  voiceRate         Float?            @default(1.0)
+  voiceName         String?           // Browser or custom TTS voice identifier
+  autoSpeak         Boolean           @default(false)
+  lastCheckinAt     DateTime?
   isDefault         Boolean           @default(false)
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
@@ -105,13 +110,15 @@ model CompanionMemory {
 }
 
 model UserPreference {
-  id          String   @id @default(uuid())
-  userId      String   @unique
-  theme       String   @default("midnight") // midnight, obsidian, cyber, rose
-  fontStyle   String   @default("sans")     // sans, serif, mono
-  bubbleStyle String   @default("modern")   // modern, rounded, glass
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  theme             String   @default("midnight") // midnight, obsidian, cyber, rose, purewhite
+  fontStyle         String   @default("sans")     // sans, serif, mono
+  bubbleStyle       String   @default("modern")   // modern, rounded, glass
+  proactiveCheckins Boolean  @default(true)
+  checkinFrequency  String   @default("gentle")   // gentle, active, off
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

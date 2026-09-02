@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { decryptApiKey } from "@/lib/crypto";
 import { createChatCompletion } from "@/lib/llm/client";
 import { sendTelegramMessage } from "@/lib/telegram";
+import { getRelevantMemories } from "@/lib/memory/semantic";
 
 export async function handleTelegramUpdate(update: any, botToken: string): Promise<boolean> {
   try {
@@ -197,21 +198,19 @@ export async function handleTelegramUpdate(update: any, botToken: string): Promi
       });
     }
 
-    // Fetch memories
-    const memories = await prisma.companionMemory.findMany({
-      where: {
-        userId: user.id,
-        characterId: activeChar.id,
-      },
-      take: 12,
-      orderBy: { createdAt: "desc" },
-    });
+    // Fetch contextually relevant memories using semantic RAG
+    const relevantMemories = await getRelevantMemories(
+      user.id,
+      activeChar.id,
+      text,
+      8
+    );
 
     let memoryContext = "";
-    if (memories.length > 0) {
+    if (relevantMemories.length > 0) {
       memoryContext =
         "\n\n[MEMORIES ABOUT THE USER]:\n" +
-        memories.map((m) => `• ${m.fact}`).join("\n");
+        relevantMemories.join("\n");
     }
 
     const systemPrompt = `You are ${activeChar.name}, a private AI companion on Telegram.

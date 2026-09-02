@@ -25,6 +25,7 @@ import Link from "next/link";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import CustomDropdown from "@/components/CustomDropdown";
 import VoiceInput from "@/components/VoiceInput";
+import VoiceSettingsModal from "@/components/VoiceSettingsModal";
 
 function getAffinityLevel(points: number = 0) {
   if (points >= 500) return { level: 5, title: "Soulmate", color: "#ec4899" };
@@ -52,6 +53,10 @@ interface CharacterInfo {
   gender: string;
   greeting: string;
   affinityPoints?: number;
+  voicePitch?: number | null;
+  voiceRate?: number | null;
+  voiceName?: string | null;
+  autoSpeak?: boolean;
 }
 
 interface ChatSessionData {
@@ -112,6 +117,7 @@ export default function ChatPage() {
   const [newMemoryCategory, setNewMemoryCategory] = useState("fact");
   const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
   const [rememberedNotice, setRememberedNotice] = useState<string | null>(null);
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -280,6 +286,11 @@ export default function ChatPage() {
         scrollToBottom("smooth");
       }
 
+      // Auto-speak reply if enabled
+      if (sessionData?.character?.autoSpeak && streamedAccumulator) {
+        handleSpeak(streamedAccumulator, assistantIndex);
+      }
+
       // Check if any memories were auto-saved
       if (sessionData?.character?.id) {
         const memRes = await fetch(`/api/memories?characterId=${sessionData.character.id}`);
@@ -393,17 +404,25 @@ export default function ChatPage() {
     const cleanText = text.replace(/[*_#`~]/g, "");
     const utterance = new SpeechSynthesisUtterance(cleanText);
 
-    // Pick appropriate voice
+    // Pick personalized voice
     const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find((v) =>
-      sessionData?.character.gender === "female"
-        ? v.name.includes("Female") || v.name.includes("Samantha") || v.name.includes("Zira")
-        : v.name.includes("Male") || v.name.includes("David") || v.name.includes("Alex")
-    );
-    if (preferredVoice) utterance.voice = preferredVoice;
+    const configuredVoiceName = sessionData?.character.voiceName;
+    let selectedVoice: SpeechSynthesisVoice | undefined;
 
-    utterance.rate = 1.0;
-    utterance.pitch = sessionData?.character.gender === "female" ? 1.05 : 0.95;
+    if (configuredVoiceName) {
+      selectedVoice = voices.find((v) => v.name === configuredVoiceName);
+    }
+    if (!selectedVoice) {
+      selectedVoice = voices.find((v) =>
+        sessionData?.character.gender === "female"
+          ? v.name.includes("Female") || v.name.includes("Samantha") || v.name.includes("Zira")
+          : v.name.includes("Male") || v.name.includes("David") || v.name.includes("Alex")
+      );
+    }
+    if (selectedVoice) utterance.voice = selectedVoice;
+
+    utterance.rate = sessionData?.character.voiceRate ?? 1.0;
+    utterance.pitch = sessionData?.character.voicePitch ?? (sessionData?.character.gender === "female" ? 1.05 : 0.95);
 
     utterance.onend = () => setSpeakingIndex(null);
     utterance.onerror = () => setSpeakingIndex(null);
@@ -654,6 +673,22 @@ export default function ChatPage() {
 
         {/* Right Actions: Memory Bank, Export, New Chat */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          {/* Voice Profile Button */}
+          <button
+            onClick={() => setIsVoiceModalOpen(true)}
+            className="btn-secondary"
+            title="Companion Voice & Auto-Speak Settings"
+            style={{
+              fontSize: "0.82rem",
+              padding: "6px 12px",
+              borderColor: character.autoSpeak ? "var(--primary)" : undefined,
+              color: character.autoSpeak ? "var(--primary)" : undefined,
+            }}
+          >
+            <Volume2 size={14} />
+            <span>Voice{character.autoSpeak ? " (Auto)" : ""}</span>
+          </button>
+
           {/* Memory Bank Button */}
           <button
             onClick={() => setIsMemoryDrawerOpen(true)}
@@ -1142,6 +1177,25 @@ export default function ChatPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Voice Settings Modal */}
+      {character && (
+        <VoiceSettingsModal
+          characterId={character.id}
+          characterName={character.name}
+          initialVoicePitch={character.voicePitch}
+          initialVoiceRate={character.voiceRate}
+          initialVoiceName={character.voiceName}
+          initialAutoSpeak={character.autoSpeak}
+          isOpen={isVoiceModalOpen}
+          onClose={() => setIsVoiceModalOpen(false)}
+          onSaved={(updated) => {
+            setSessionData((prev) =>
+              prev ? { ...prev, character: { ...prev.character, ...updated } } : prev
+            );
+          }}
+        />
       )}
     </div>
   );

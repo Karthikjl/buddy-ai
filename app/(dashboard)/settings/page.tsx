@@ -17,6 +17,11 @@ import {
   RefreshCw,
   Smartphone,
   Copy,
+  Database,
+  Download,
+  Upload,
+  Clock,
+  BellRing,
 } from "lucide-react";
 
 interface ApiKeyInfo {
@@ -71,9 +76,15 @@ const PROVIDER_PRESETS = [
 export default function SettingsPage() {
   const { theme, setTheme, fontStyle, setFontStyle, bubbleStyle, setBubbleStyle } = useTheme();
 
-  const [activeTab, setActiveTab] = useState<"keys" | "appearance" | "telegram">("keys");
+  const [activeTab, setActiveTab] = useState<"keys" | "appearance" | "telegram" | "vault">("keys");
   const [keys, setKeys] = useState<ApiKeyInfo[]>([]);
   const [loadingKeys, setLoadingKeys] = useState(true);
+
+  // Vault and Proactive state
+  const [restoringVault, setRestoringVault] = useState(false);
+  const [vaultNotice, setVaultNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [proactiveFrequency, setProactiveFrequency] = useState("gentle");
+  const [triggeringCheckin, setTriggeringCheckin] = useState(false);
 
   // Telegram bot state
   const [telegramConfig, setTelegramConfig] = useState<{
@@ -419,6 +430,25 @@ export default function SettingsPage() {
           {telegramConfig?.isLinked && (
             <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#10b981" }} />
           )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab("vault")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "8px 16px",
+            borderRadius: "var(--radius-sm)",
+            fontSize: "0.9rem",
+            fontWeight: 600,
+            backgroundColor: activeTab === "vault" ? "var(--primary-light)" : "transparent",
+            color: activeTab === "vault" ? "var(--primary)" : "var(--text-muted)",
+            border: activeTab === "vault" ? "1px solid var(--border-glow)" : "1px solid transparent",
+          }}
+        >
+          <Database size={16} />
+          <span>Data Vault & Backups</span>
         </button>
       </div>
 
@@ -1198,6 +1228,205 @@ export default function SettingsPage() {
                   )}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 4: Data Vault & Backups */}
+      {activeTab === "vault" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
+          {vaultNotice && (
+            <div
+              style={{
+                padding: "12px 16px",
+                borderRadius: "var(--radius-md)",
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                backgroundColor:
+                  vaultNotice.type === "success" ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)",
+                border:
+                  vaultNotice.type === "success"
+                    ? "1px solid rgba(16, 185, 129, 0.3)"
+                    : "1px solid rgba(239, 68, 68, 0.3)",
+                color: vaultNotice.type === "success" ? "#6ee7b7" : "#fca5a5",
+                fontSize: "0.9rem",
+              }}
+            >
+              {vaultNotice.type === "success" ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+              <span>{vaultNotice.text}</span>
+            </div>
+          )}
+
+          {/* Banner */}
+          <div
+            className="glass-panel"
+            style={{
+              padding: "24px",
+              display: "flex",
+              alignItems: "center",
+              gap: "18px",
+              background: "linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(99, 102, 241, 0.08) 100%)",
+            }}
+          >
+            <div
+              style={{
+                width: "48px",
+                height: "48px",
+                borderRadius: "14px",
+                backgroundColor: "rgba(16, 185, 129, 0.15)",
+                color: "#10b981",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <ShieldCheck size={26} />
+            </div>
+            <div>
+              <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.18rem", fontWeight: 700 }}>
+                100% Private, Local Data Vault
+              </h2>
+              <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: "4px" }}>
+                All memories, chats, personas, and encrypted keys live in your local database. Export or restore anytime.
+              </p>
+            </div>
+          </div>
+
+          {/* Vault Controls Grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "24px" }}>
+            {/* Backup & Restore */}
+            <div className="glass-panel" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <Database size={18} color="var(--primary)" />
+                <h3 style={{ fontSize: "1rem", fontWeight: 700 }}>Full Vault Backup</h3>
+              </div>
+              <p style={{ color: "var(--text-muted)", fontSize: "0.84rem", lineHeight: 1.5 }}>
+                Download an unencrypted portable JSON archive containing your characters, conversations, and learned companion memories.
+              </p>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "8px" }}>
+                <a
+                  href="/api/backup"
+                  download
+                  className="btn-primary"
+                  style={{ textDecoration: "none", justifyContent: "center" }}
+                >
+                  <Download size={15} />
+                  <span>Download Full Backup (.json)</span>
+                </a>
+
+                <label
+                  className="btn-secondary"
+                  style={{
+                    cursor: "pointer",
+                    justifyContent: "center",
+                    position: "relative",
+                  }}
+                >
+                  <Upload size={15} />
+                  <span>{restoringVault ? "Restoring..." : "Restore Backup (.json)"}</span>
+                  <input
+                    type="file"
+                    accept=".json"
+                    disabled={restoringVault}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setRestoringVault(true);
+                      setVaultNotice(null);
+                      const reader = new FileReader();
+                      reader.onload = async (ev) => {
+                        try {
+                          const json = JSON.parse(ev.target?.result as string);
+                          const res = await fetch("/api/backup", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(json),
+                          });
+                          const data = await res.json();
+                          if (res.ok) {
+                            setVaultNotice({
+                              type: "success",
+                              text: `Restored ${data.importedMemories} memories and ${data.importedCharacters} characters!`,
+                            });
+                          } else {
+                            throw new Error(data.error);
+                          }
+                        } catch (err: any) {
+                          setVaultNotice({ type: "error", text: err.message || "Failed to restore backup" });
+                        } finally {
+                          setRestoringVault(false);
+                        }
+                      };
+                      reader.readAsText(file);
+                    }}
+                    style={{ display: "none" }}
+                  />
+                </label>
+              </div>
+            </div>
+
+            {/* Proactive Check-ins */}
+            <div className="glass-panel" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <BellRing size={18} color="var(--accent)" />
+                <h3 style={{ fontSize: "1rem", fontWeight: 700 }}>Proactive Companion Check-ins</h3>
+              </div>
+              <p style={{ color: "var(--text-muted)", fontSize: "0.84rem", lineHeight: 1.5 }}>
+                Companions reach out with morning/evening check-ins and idle nudges across Web and paired Telegram.
+              </p>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "8px" }}>
+                  Check-in Cadence
+                </label>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  {[
+                    { id: "gentle", label: "Gentle (1x / day)" },
+                    { id: "active", label: "Active (2x / day)" },
+                    { id: "off", label: "Off" },
+                  ].map((freq) => (
+                    <button
+                      key={freq.id}
+                      type="button"
+                      onClick={() => setProactiveFrequency(freq.id)}
+                      className={proactiveFrequency === freq.id ? "btn-primary" : "btn-secondary"}
+                      style={{ flex: 1, fontSize: "0.78rem", padding: "6px 8px", justifyContent: "center" }}
+                    >
+                      {freq.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  setTriggeringCheckin(true);
+                  try {
+                    const res = await fetch("/api/checkins", { method: "POST" });
+                    const data = await res.json();
+                    if (res.ok) {
+                      setVaultNotice({
+                        type: "success",
+                        text: `${data.characterName} sent: "${data.message}" (Telegram: ${data.telegramSent ? "Sent ⚡" : "Not paired"})`,
+                      });
+                    }
+                  } catch (err: any) {
+                    setVaultNotice({ type: "error", text: err.message || "Failed to trigger check-in" });
+                  } finally {
+                    setTriggeringCheckin(false);
+                  }
+                }}
+                disabled={triggeringCheckin}
+                className="btn-secondary"
+                style={{ width: "100%", justifyContent: "center", marginTop: "4px" }}
+              >
+                <Clock size={14} className={triggeringCheckin ? "animate-spin" : ""} />
+                <span>{triggeringCheckin ? "Sending Check-in..." : "Test Instant Check-in Now"}</span>
+              </button>
             </div>
           </div>
         </div>

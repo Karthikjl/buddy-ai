@@ -78,6 +78,7 @@ export default function Sidebar() {
   const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Characters", href: "/characters", icon: Users },
+    { label: "Marketplace", href: "/marketplace", icon: Sparkles },
     { label: "Keys & Settings", href: "/settings", icon: Settings },
   ];
 
