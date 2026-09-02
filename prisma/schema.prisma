@@ -8,17 +8,18 @@ datasource db {
 }
 
 model User {
-  id           String          @id @default(uuid())
-  email        String          @unique
+  id           String            @id @default(uuid())
+  email        String            @unique
   name         String?
   passwordHash String
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 
   apiKeys      ApiKey[]
   characters   Character[]
   chatSessions ChatSession[]
   preferences  UserPreference?
+  memories     CompanionMemory[]
 }
 
 model ApiKey {
@@ -39,35 +40,38 @@ model ApiKey {
 }
 
 model Character {
-  id                String        @id @default(uuid())
-  userId            String?       // Null for system/preset characters, set for user custom characters
+  id                String            @id @default(uuid())
+  userId            String?           // Null for system/preset characters, set for user custom characters
   name              String
-  gender            String        @default("neutral") // male, female, neutral
-  tagline           String        // Short catchy description
-  personalityPrompt String        // Detailed persona system instructions
-  avatarUrl         String?       // Image or avatar identifier
-  greeting          String        // Initial message sent by character
-  mood              String?       @default("friendly") // friendly, witty, empathetic, flirty, focused
-  relationship      String?       @default("friend")   // friend, best friend, mentor, companion
-  isDefault         Boolean       @default(false)
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  gender            String            @default("neutral") // male, female, neutral
+  tagline           String            // Short catchy description
+  personalityPrompt String            // Detailed persona system instructions
+  avatarUrl         String?           // Image or avatar identifier
+  greeting          String            // Initial message sent by character
+  mood              String?           @default("friendly") // friendly, witty, empathetic, flirty, focused, motivating
+  relationship      String?           @default("friend")   // friend, best friend, mentor, companion, partner
+  isDefault         Boolean           @default(false)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
-  user              User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
   chatSessions      ChatSession[]
+  memories          CompanionMemory[]
 }
 
 model ChatSession {
-  id          String    @id @default(uuid())
-  userId      String
-  characterId String
-  title       String    @default("New Conversation")
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                 String    @id @default(uuid())
+  userId             String
+  characterId        String
+  title              String    @default("New Conversation")
+  activeMood         String?   // Dynamic mood override for this chat
+  activeRelationship String?   // Dynamic relationship override for this chat
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
-  messages    Message[]
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  character          Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  messages           Message[]
 }
 
 model Message {
@@ -78,6 +82,19 @@ model Message {
   createdAt DateTime    @default(now())
 
   session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model CompanionMemory {
+  id          String    @id @default(uuid())
+  userId      String
+  characterId String
+  category    String    @default("fact") // fact, preference, goal, habit, secret
+  fact        String    // The actual memory text e.g. "Prefers tea over coffee"
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
 }
 
 model UserPreference {

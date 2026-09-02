@@ -37,6 +37,7 @@ export default function Sidebar() {
   const router = useRouter();
   const { data: session } = useSession();
   const [sessions, setSessions] = useState<ChatSessionItem[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [isOpenMobile, setIsOpenMobile] = useState(false);
 
   const fetchSessions = async () => {
@@ -213,7 +214,7 @@ export default function Sidebar() {
         {/* Active Conversations Section */}
         <div
           style={{
-            marginTop: "28px",
+            marginTop: "24px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -251,56 +252,90 @@ export default function Sidebar() {
           </Link>
         </div>
 
+        {/* Conversation Search Bar */}
+        <div style={{ marginTop: "10px", marginBottom: "6px" }}>
+          <input
+            type="text"
+            placeholder="Search chats..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "7px 12px",
+              fontSize: "0.8rem",
+              borderRadius: "var(--radius-sm)",
+              backgroundColor: "rgba(255, 255, 255, 0.04)",
+              border: "1px solid var(--border-subtle)",
+              color: "var(--text-main)",
+              outline: "none",
+            }}
+          />
+        </div>
+
         <div
           style={{
             flex: 1,
             overflowY: "auto",
-            marginTop: "8px",
+            marginTop: "4px",
             display: "flex",
             flexDirection: "column",
             gap: "4px",
           }}
         >
-          {sessions.length === 0 ? (
-            <div
-              style={{
-                padding: "24px 12px",
-                textAlign: "center",
-                color: "var(--text-faint)",
-                fontSize: "0.82rem",
-              }}
-            >
-              No active chats yet.
-              <br />
-              <Link
-                href="/characters"
-                prefetch={false}
-                style={{ color: "var(--primary)", marginTop: "6px", display: "inline-block" }}
+        {(() => {
+          const displayedSessions = sessions.filter((s) => {
+            if (!searchQuery.trim()) return true;
+            const q = searchQuery.toLowerCase();
+            return (
+              s.title.toLowerCase().includes(q) ||
+              s.character.name.toLowerCase().includes(q) ||
+              s.messages.some((m) => m.content.toLowerCase().includes(q))
+            );
+          });
+
+          if (displayedSessions.length === 0) {
+            return (
+              <div
+                style={{
+                  padding: "24px 12px",
+                  textAlign: "center",
+                  color: "var(--text-faint)",
+                  fontSize: "0.82rem",
+                }}
               >
-                Pick a buddy to talk!
-              </Link>
-            </div>
-          ) : (
-            sessions.map((s) => {
-              const isActive = pathname === `/chat/${s.id}`;
-              return (
+                {searchQuery ? "No matching conversations." : "No active chats yet."}
+                <br />
                 <Link
-                  key={s.id}
-                  href={`/chat/${s.id}`}
+                  href="/characters"
                   prefetch={false}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "8px 10px",
-                    borderRadius: "var(--radius-sm)",
-                    backgroundColor: isActive ? "rgba(99, 102, 241, 0.12)" : "transparent",
-                    border: isActive ? "1px solid rgba(99, 102, 241, 0.25)" : "1px solid transparent",
-                    color: isActive ? "#ffffff" : "var(--text-muted)",
-                    fontSize: "0.87rem",
-                    transition: "background 0.15s ease",
-                  }}
+                  style={{ color: "var(--primary)", marginTop: "6px", display: "inline-block" }}
                 >
+                  Pick a buddy to talk!
+                </Link>
+              </div>
+            );
+          }
+
+          return displayedSessions.map((s) => {
+            const isActive = pathname === `/chat/${s.id}`;
+            return (
+              <Link
+                key={s.id}
+                href={`/chat/${s.id}`}
+                prefetch={false}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "8px 10px",
+                  borderRadius: "var(--radius-sm)",
+                  backgroundColor: isActive ? "rgba(99, 102, 241, 0.12)" : "transparent",
+                  border: isActive ? "1px solid rgba(99, 102, 241, 0.25)" : "1px solid transparent",
+                  color: isActive ? "#ffffff" : "var(--text-muted)",
+                  fontSize: "0.87rem",
+                  transition: "background 0.15s ease",
+                }}
+              >
                   <div
                     style={{
                       display: "flex",
@@ -340,8 +375,8 @@ export default function Sidebar() {
                   </button>
                 </Link>
               );
-            })
-          )}
+            });
+          })()}
         </div>
 
         {/* User Session Profile & Signout */}

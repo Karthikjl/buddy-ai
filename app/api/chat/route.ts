@@ -26,11 +26,11 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { sessionId, message } = await req.json();
+    const { sessionId, message, regenerate } = await req.json();
 
-    if (!sessionId || !message?.trim()) {
+    if (!sessionId) {
       return NextResponse.json(
-        { error: "Session ID and message are required" },
+        { error: "Session ID is required" },
         { status: 400 }
       );
     }
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
         character: true,
         messages: {
           orderBy: { createdAt: "desc" },
-          take: 16,
+          take: 20,
         },
       },
     });
@@ -53,21 +53,64 @@ export async function POST(req: Request) {
       );
     }
 
-    // Save user's message immediately
-    await prisma.message.create({
-      data: {
-        sessionId,
-        role: "user",
-        content: message.trim(),
-      },
-    });
+    let promptUserMessage = message?.trim() || "";
+
+    if (regenerate) {
+      // If regenerating, delete the last assistant message if present
+      const lastMsg = chatSession.messages[0];
+      if (lastMsg && lastMsg.role === "assistant") {
+        await prisma.message.delete({ where: { id: lastMsg.id } });
+        chatSession.messages.shift(); // remove from local array
+      }
+      // If no new message text passed, use the last user message
+      if (!promptUserMessage) {
+        const lastUser = chatSession.messages.find((m) => m.role === "user");
+        if (lastUser) {
+          promptUserMessage = lastUser.content;
+        }
+      }
+    } else {
+      if (!promptUserMessage) {
+        return NextResponse.json(
+          { error: "Message content is required" },
+          { status: 400 }
+        );
+      }
+
+      // Save user's message immediately
+      await prisma.message.create({
+        data: {
+          sessionId,
+          role: "user",
+          content: promptUserMessage,
+        },
+      });
+
+      // Auto-detect and save memory if user explicitly says "remember that..." or "remember this:"
+      const lower = promptUserMessage.toLowerCase();
+      const rememberMatch = lower.match(/remember (that|this:|my) (.+)/i);
+      if (rememberMatch && rememberMatch[2]) {
+        try {
+          await prisma.companionMemory.create({
+            data: {
+              userId: user.id,
+              characterId: chatSession.characterId,
+              category: "fact",
+              fact: rememberMatch[2].trim(),
+            },
+          });
+        } catch (memErr) {
+          console.error("Auto memory capture error:", memErr);
+        }
+      }
+    }
 
     // Check for active API key
     const activeKeyRecord = user.apiKeys[0];
 
     // If no key is set yet, provide a guided simulated response
     if (!activeKeyRecord) {
-      const mockReply = `Hey! I received your message: "${message.trim()}". To get real AI responses powered by OpenAI, OpenRouter, Groq, or your local Ollama instance, please configure your API key in the **Settings** page!`;
+      const mockReply = `Hey! I received your message: "${promptUserMessage}". To get real AI responses powered by OpenAI, OpenRouter, Groq, or your local Ollama instance, please configure your API key in the **Settings** page!`;
 
       await prisma.message.create({
         data: {
@@ -113,22 +156,52 @@ export async function POST(req: Request) {
       );
     }
 
+    // Fetch Companion Memories for this user and character
+    const companionMemories = await prisma.companionMemory.findMany({
+      where: {
+        userId: user.id,
+        characterId: chatSession.characterId,
+      },
+      take: 15,
+      orderBy: { createdAt: "desc" },
+    });
+
     // Build context messages
-    // Messages in DB were fetched desc, reverse them to asc order
     const history = [...chatSession.messages].reverse();
+
+    // Compose dynamic directives
+    const activeMood = chatSession.activeMood || chatSession.character.mood || "friendly";
+    const activeRelationship =
+      chatSession.activeRelationship || chatSession.character.relationship || "friend";
+
+    let memoryContext = "";
+    if (companionMemories.length > 0) {
+      memoryContext =
+        "\n\n[MEMORIES ABOUT THE USER - Things you remember about them]:\n" +
+        companionMemories.map((m) => `- [${m.category.toUpperCase()}]: ${m.fact}`).join("\n") +
+        "\nNaturally incorporate these memories when relevant without awkwardly announcing them.";
+    }
+
+    const systemPromptWithDynamics = `${chatSession.character.personalityPrompt}
+
+[CURRENT CONVERSATIONAL DYNAMICS]:
+- Active Emotional Mood: ${activeMood} (Adapt your tone, vocabulary, and banter to reflect this mood).
+- Relationship Dynamic: ${activeRelationship} (Interact with the user according to this dynamic).${memoryContext}`;
 
     const formattedMessages: ChatMessage[] = [
       {
         role: "system",
-        content: chatSession.character.personalityPrompt,
+        content: systemPromptWithDynamics,
       },
-      ...history.map((m) => ({
-        role: m.role as "user" | "assistant" | "system",
-        content: m.content,
-      })),
+      ...history
+        .filter((m) => !regenerate || m.content !== promptUserMessage)
+        .map((m) => ({
+          role: m.role as "user" | "assistant" | "system",
+          content: m.content,
+        })),
       {
         role: "user",
-        content: message.trim(),
+        content: promptUserMessage,
       },
     ];
 
@@ -180,13 +253,13 @@ export async function POST(req: Request) {
                     controller.enqueue(encoder.encode(delta));
                   }
                 } catch {
-                  // If not json or malformed chunk, pass through if it's raw text
+                  // Ignore malformed chunk
                 }
               }
             }
           }
 
-          // Process remaining buffer
+          // Process trailing buffer
           if (buffer.trim().startsWith("data: ")) {
             try {
               const dataStr = buffer.trim().slice(6);
@@ -203,7 +276,7 @@ export async function POST(req: Request) {
             }
           }
 
-          // Save assistant message to DB after stream completion
+          // Persist assistant message to DB
           if (fullAssistantReply.trim()) {
             await prisma.message.create({
               data: {

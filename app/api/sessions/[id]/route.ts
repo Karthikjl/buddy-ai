@@ -76,7 +76,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { title } = await req.json();
+  const { title, activeMood, activeRelationship } = await req.json();
 
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
@@ -93,7 +93,11 @@ export async function PATCH(
 
   const updated = await prisma.chatSession.update({
     where: { id: params.id },
-    data: { title },
+    data: {
+      ...(title !== undefined ? { title } : {}),
+      ...(activeMood !== undefined ? { activeMood } : {}),
+      ...(activeRelationship !== undefined ? { activeRelationship } : {}),
+    },
   });
 
   return NextResponse.json({ session: updated });
