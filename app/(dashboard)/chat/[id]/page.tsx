@@ -24,6 +24,15 @@ import {
 import Link from "next/link";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import CustomDropdown from "@/components/CustomDropdown";
+import VoiceInput from "@/components/VoiceInput";
+
+function getAffinityLevel(points: number = 0) {
+  if (points >= 500) return { level: 5, title: "Soulmate", color: "#ec4899" };
+  if (points >= 250) return { level: 4, title: "Best Friend", color: "#8b5cf6" };
+  if (points >= 100) return { level: 3, title: "Confidante", color: "#06b6d4" };
+  if (points >= 35) return { level: 2, title: "Companion", color: "#10b981" };
+  return { level: 1, title: "Acquaintance", color: "#94a3b8" };
+}
 
 interface MessageItem {
   id?: string;
@@ -36,11 +45,13 @@ interface CharacterInfo {
   id: string;
   name: string;
   avatarUrl: string | null;
+  customImage?: string | null;
   tagline: string;
   mood: string | null;
   relationship: string | null;
   gender: string;
   greeting: string;
+  affinityPoints?: number;
 }
 
 interface ChatSessionData {
@@ -521,9 +532,18 @@ export default function ChatPage() {
               justifyContent: "center",
               fontSize: "1.7rem",
               position: "relative",
+              overflow: "hidden",
             }}
           >
-            {character.avatarUrl || "🤖"}
+            {character.customImage ? (
+              <img
+                src={character.customImage}
+                alt={character.name}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+            ) : (
+              character.avatarUrl || "🤖"
+            )}
             <div
               style={{
                 position: "absolute",
@@ -543,6 +563,27 @@ export default function ChatPage() {
               <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.15rem" }}>
                 {character.name}
               </span>
+
+              {/* Affinity Level Badge */}
+              {(() => {
+                const aff = getAffinityLevel((character as any).affinityPoints || 0);
+                return (
+                  <span
+                    title={`${aff.title} • ${(character as any).affinityPoints || 0} Affinity XP`}
+                    style={{
+                      fontSize: "0.68rem",
+                      fontWeight: 600,
+                      padding: "2px 8px",
+                      borderRadius: "999px",
+                      backgroundColor: `${aff.color}15`,
+                      color: aff.color,
+                      border: `1px solid ${aff.color}40`,
+                    }}
+                  >
+                    Lv. {aff.level} • {aff.title}
+                  </span>
+                );
+              })()}
 
               {/* Title editor */}
               {isEditingTitle ? (
@@ -929,6 +970,11 @@ export default function ChatPage() {
               maxHeight: "180px",
               lineHeight: 1.5,
             }}
+          />
+
+          <VoiceInput
+            onTranscript={(text) => setInputText((prev) => (prev ? prev + " " + text : text))}
+            disabled={isStreaming}
           />
 
           <button

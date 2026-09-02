@@ -120,6 +120,12 @@ export async function POST(req: Request) {
         },
       });
 
+      // Increment affinity points
+      await prisma.character.update({
+        where: { id: chatSession.characterId },
+        data: { affinityPoints: { increment: 5 } },
+      });
+
       // Stream the mock reply word-by-word so UI experiences streaming immediately
       const encoder = new TextEncoder();
       const stream = new ReadableStream({
@@ -289,6 +295,12 @@ export async function POST(req: Request) {
             await prisma.chatSession.update({
               where: { id: sessionId },
               data: { updatedAt: new Date() },
+            });
+
+            // Increment companion affinity points
+            await prisma.character.update({
+              where: { id: chatSession.characterId },
+              data: { affinityPoints: { increment: 5 } },
             });
           }
 

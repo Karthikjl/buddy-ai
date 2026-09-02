@@ -20,6 +20,11 @@ model User {
   chatSessions ChatSession[]
   preferences  UserPreference?
   memories     CompanionMemory[]
+  telegramConfig TelegramBotConfig?
+
+  telegramChatId             String? @unique
+  telegramPairCode           String? @unique
+  telegramActiveCharacterId  String?
 }
 
 model ApiKey {
@@ -46,10 +51,12 @@ model Character {
   gender            String            @default("neutral") // male, female, neutral
   tagline           String            // Short catchy description
   personalityPrompt String            // Detailed persona system instructions
-  avatarUrl         String?           // Image or avatar identifier
+  avatarUrl         String?           // Image or avatar identifier (e.g. emoji or icon)
+  customImage       String?           // Base64 or uploaded custom avatar image URL
   greeting          String            // Initial message sent by character
   mood              String?           @default("friendly") // friendly, witty, empathetic, flirty, focused, motivating
   relationship      String?           @default("friend")   // friend, best friend, mentor, companion, partner
+  affinityPoints    Int               @default(0)          // Conversation depth / XP
   isDefault         Boolean           @default(false)
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
@@ -103,6 +110,18 @@ model UserPreference {
   theme       String   @default("midnight") // midnight, obsidian, cyber, rose
   fontStyle   String   @default("sans")     // sans, serif, mono
   bubbleStyle String   @default("modern")   // modern, rounded, glass
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TelegramBotConfig {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  botToken    String   // Bot token from @BotFather
+  botUsername String?  // e.g. "MyBuddyAiBot"
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

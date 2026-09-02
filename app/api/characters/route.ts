@@ -50,6 +50,7 @@ export async function POST(req: Request) {
       greeting,
       mood,
       relationship,
+      customImage,
     } = body;
 
     if (!name || !tagline || !personalityPrompt) {
@@ -67,6 +68,7 @@ export async function POST(req: Request) {
         tagline: tagline.trim(),
         personalityPrompt: personalityPrompt.trim(),
         avatarUrl: avatarUrl || "🤖",
+        customImage: customImage || null,
         greeting: greeting?.trim() || `Hey there! I'm ${name.trim()}. Great to meet you.`,
         mood: mood || "friendly",
         relationship: relationship || "friend",

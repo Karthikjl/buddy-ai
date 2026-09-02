@@ -120,3 +120,51 @@ export async function streamChatCompletion({
 
   return res;
 }
+
+/**
+ * Standard non-streaming chat completion for webhook and background responses.
+ */
+export async function createChatCompletion({
+  baseUrl,
+  apiKey,
+  model,
+  messages,
+  temperature = 0.8,
+  maxTokens = 1200,
+}: LLMRequestOptions): Promise<string> {
+  const cleanBaseUrl = baseUrl.replace(/\/+$/, "");
+  const endpoint = cleanBaseUrl.endsWith("/v1")
+    ? `${cleanBaseUrl}/chat/completions`
+    : `${cleanBaseUrl}/v1/chat/completions`;
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (apiKey) {
+    headers["Authorization"] = `Bearer ${apiKey}`;
+  }
+  if (cleanBaseUrl.includes("openrouter.ai")) {
+    headers["HTTP-Referer"] = "https://buddyai.local";
+    headers["X-Title"] = "BuddyAi Companion";
+  }
+
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature,
+      max_tokens: maxTokens,
+      stream: false,
+    }),
+  });
+
+  if (!res.ok) {
+    const errorBody = await res.text();
+    throw new Error(`LLM provider error (${res.status}): ${errorBody}`);
+  }
+
+  const json = await res.json();
+  return json.choices?.[0]?.message?.content || "";
+}

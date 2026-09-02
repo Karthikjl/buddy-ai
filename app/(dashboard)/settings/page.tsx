@@ -12,6 +12,11 @@ import {
   CheckCircle2,
   AlertCircle,
   Cpu,
+  Send,
+  ExternalLink,
+  RefreshCw,
+  Smartphone,
+  Copy,
 } from "lucide-react";
 
 interface ApiKeyInfo {
@@ -66,9 +71,27 @@ const PROVIDER_PRESETS = [
 export default function SettingsPage() {
   const { theme, setTheme, fontStyle, setFontStyle, bubbleStyle, setBubbleStyle } = useTheme();
 
-  const [activeTab, setActiveTab] = useState<"keys" | "appearance">("keys");
+  const [activeTab, setActiveTab] = useState<"keys" | "appearance" | "telegram">("keys");
   const [keys, setKeys] = useState<ApiKeyInfo[]>([]);
   const [loadingKeys, setLoadingKeys] = useState(true);
+
+  // Telegram bot state
+  const [telegramConfig, setTelegramConfig] = useState<{
+    isConfigured: boolean;
+    botUsername: string | null;
+    isActive: boolean;
+    isLinked: boolean;
+    telegramChatId: string | null;
+    pairCode: string | null;
+  } | null>(null);
+  const [botTokenInput, setBotTokenInput] = useState("");
+  const [savingTelegram, setSavingTelegram] = useState(false);
+  const [telegramNotice, setTelegramNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [generatingCode, setGeneratingCode] = useState(false);
+  const [pairCodeDisplay, setPairCodeDisplay] = useState<string | null>(null);
+  const [pairLinkDisplay, setPairLinkDisplay] = useState<string | null>(null);
+  const [copiedCommand, setCopiedCommand] = useState(false);
+  const [syncingTelegram, setSyncingTelegram] = useState(false);
 
   // Key form state
   const [selectedPreset, setSelectedPreset] = useState("openrouter");
@@ -99,7 +122,128 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetchKeys();
+    fetchTelegramConfig();
   }, []);
+
+  const fetchTelegramConfig = async () => {
+    try {
+      const res = await fetch("/api/telegram/config");
+      if (res.ok) {
+        const data = await res.json();
+        setTelegramConfig(data);
+        if (data.pairCode) {
+          setPairCodeDisplay(data.pairCode);
+          if (data.botUsername) {
+            setPairLinkDisplay(`https://t.me/${data.botUsername}?start=${data.pairCode}`);
+          }
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSaveTelegramToken = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!botTokenInput.trim()) return;
+
+    setSavingTelegram(true);
+    setTelegramNotice(null);
+
+    try {
+      const res = await fetch("/api/telegram/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ botToken: botTokenInput.trim() }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setTelegramNotice({ type: "error", text: data.error || "Failed to verify bot token" });
+      } else {
+        setTelegramNotice({ type: "success", text: `Connected to @${data.botUsername} successfully!` });
+        setBotTokenInput("");
+        fetchTelegramConfig();
+      }
+    } catch (err: any) {
+      setTelegramNotice({ type: "error", text: err.message || "Network error" });
+    } finally {
+      setSavingTelegram(false);
+    }
+  };
+
+  const handleGeneratePairCode = async () => {
+    setGeneratingCode(true);
+    setTelegramNotice(null);
+    try {
+      const res = await fetch("/api/telegram/pair", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        setPairCodeDisplay(data.pairCode);
+        setPairLinkDisplay(data.directLink);
+        setTelegramNotice({ type: "success", text: `Pairing code ${data.pairCode} generated!` });
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setGeneratingCode(false);
+    }
+  };
+
+  const handleUnlinkTelegram = async () => {
+    if (!confirm("Are you sure you want to disconnect Telegram?")) return;
+    try {
+      const res = await fetch("/api/telegram/config", { method: "DELETE" });
+      if (res.ok) {
+        setTelegramNotice({ type: "success", text: "Telegram bot disconnected." });
+        setPairCodeDisplay(null);
+        setPairLinkDisplay(null);
+        fetchTelegramConfig();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSyncTelegram = async () => {
+    setSyncingTelegram(true);
+    try {
+      const res = await fetch("/api/telegram/sync", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.isLinked) {
+          setTelegramNotice({ type: "success", text: "Telegram device paired successfully!" });
+          fetchTelegramConfig();
+        } else if (data.processedCount > 0) {
+          setTelegramNotice({ type: "success", text: `Processed ${data.processedCount} update(s) from Telegram!` });
+          fetchTelegramConfig();
+        } else {
+          setTelegramNotice({ type: "success", text: "Checked Telegram: No new messages yet. Make sure to send the /start command!" });
+        }
+      }
+    } catch (err: any) {
+      setTelegramNotice({ type: "error", text: err.message || "Sync failed" });
+    } finally {
+      setSyncingTelegram(false);
+    }
+  };
+
+  // Background polling while waiting for pairing
+  useEffect(() => {
+    if (activeTab === "telegram" && telegramConfig?.isConfigured && !telegramConfig?.isLinked) {
+      const interval = setInterval(() => {
+        fetch("/api/telegram/sync", { method: "POST" })
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.isLinked) {
+              fetchTelegramConfig();
+            }
+          })
+          .catch(() => {});
+      }, 3500);
+      return () => clearInterval(interval);
+    }
+  }, [activeTab, telegramConfig?.isConfigured, telegramConfig?.isLinked]);
 
   const handlePresetSelect = (presetId: string) => {
     setSelectedPreset(presetId);
@@ -253,6 +397,28 @@ export default function SettingsPage() {
         >
           <Paintbrush size={16} />
           <span>Appearance & Themes</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("telegram")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "8px 16px",
+            borderRadius: "var(--radius-sm)",
+            fontSize: "0.9rem",
+            fontWeight: 600,
+            backgroundColor: activeTab === "telegram" ? "var(--primary-light)" : "transparent",
+            color: activeTab === "telegram" ? "var(--primary)" : "var(--text-muted)",
+            border: activeTab === "telegram" ? "1px solid var(--border-glow)" : "1px solid transparent",
+          }}
+        >
+          <Send size={16} />
+          <span>Telegram Bot Sync</span>
+          {telegramConfig?.isLinked && (
+            <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#10b981" }} />
+          )}
         </button>
       </div>
 
@@ -696,6 +862,342 @@ export default function SettingsPage() {
                   ))}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 3: Telegram Bot Sync */}
+      {activeTab === "telegram" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
+          {/* Notification */}
+          {telegramNotice && (
+            <div
+              style={{
+                padding: "12px 16px",
+                borderRadius: "var(--radius-md)",
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                backgroundColor:
+                  telegramNotice.type === "success" ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)",
+                border:
+                  telegramNotice.type === "success"
+                    ? "1px solid rgba(16, 185, 129, 0.3)"
+                    : "1px solid rgba(239, 68, 68, 0.3)",
+                color: telegramNotice.type === "success" ? "#6ee7b7" : "#fca5a5",
+                fontSize: "0.9rem",
+              }}
+            >
+              {telegramNotice.type === "success" ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+              <span>{telegramNotice.text}</span>
+            </div>
+          )}
+
+          {/* Status Banner */}
+          <div
+            className="glass-panel"
+            style={{
+              padding: "24px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "18px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <div
+                style={{
+                  width: "48px",
+                  height: "48px",
+                  borderRadius: "14px",
+                  backgroundColor: telegramConfig?.isLinked ? "rgba(16, 185, 129, 0.15)" : "var(--primary-light)",
+                  color: telegramConfig?.isLinked ? "#10b981" : "var(--primary)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Smartphone size={24} />
+              </div>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.15rem", fontWeight: 700 }}>
+                    Telegram Companion Sync
+                  </h2>
+                  <span
+                    className="badge"
+                    style={{
+                      fontSize: "0.72rem",
+                      backgroundColor: telegramConfig?.isLinked
+                        ? "rgba(16, 185, 129, 0.15)"
+                        : telegramConfig?.isConfigured
+                        ? "rgba(245, 158, 11, 0.15)"
+                        : "rgba(148, 163, 184, 0.15)",
+                      color: telegramConfig?.isLinked
+                        ? "#10b981"
+                        : telegramConfig?.isConfigured
+                        ? "#f59e0b"
+                        : "var(--text-muted)",
+                      border: "none",
+                    }}
+                  >
+                    {telegramConfig?.isLinked
+                      ? "Linked & Active"
+                      : telegramConfig?.isConfigured
+                      ? "Bot Connected (Unpaired)"
+                      : "Not Configured"}
+                  </span>
+                </div>
+                <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: "4px" }}>
+                  Chat with Alex, Maya, or any companion on-the-go from Telegram with full memory sync.
+                </p>
+              </div>
+            </div>
+
+            {telegramConfig?.isConfigured && (
+              <button
+                onClick={handleUnlinkTelegram}
+                className="btn-secondary"
+                style={{ fontSize: "0.82rem", color: "#ef4444", borderColor: "rgba(239, 68, 68, 0.3)" }}
+              >
+                <Trash2 size={14} />
+                <span>Disconnect Bot</span>
+              </button>
+            )}
+          </div>
+
+          {/* Setup Steps Grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "24px" }}>
+            {/* Step 1: Connect Bot Token */}
+            <div className="glass-panel" style={{ padding: "24px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
+                <div
+                  style={{
+                    width: "24px",
+                    height: "24px",
+                    borderRadius: "50%",
+                    backgroundColor: "var(--primary-light)",
+                    color: "var(--primary)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "0.8rem",
+                    fontWeight: 700,
+                  }}
+                >
+                  1
+                </div>
+                <h3 style={{ fontSize: "1rem", fontWeight: 600 }}>Telegram Bot Token</h3>
+              </div>
+
+              <p style={{ color: "var(--text-muted)", fontSize: "0.84rem", lineHeight: 1.5, marginBottom: "14px" }}>
+                1. Open <a href="https://t.me/BotFather" target="_blank" rel="noreferrer" style={{ color: "var(--primary)", textDecoration: "underline" }}>@BotFather</a> on Telegram.
+                <br />
+                2. Send <code>/newbot</code>, choose a name and username.
+                <br />
+                3. Paste the generated HTTP API token below:
+              </p>
+
+              <form onSubmit={handleSaveTelegramToken} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <input
+                  type="text"
+                  placeholder={telegramConfig?.botUsername ? `Connected as @${telegramConfig.botUsername}` : "e.g. 123456789:ABCdefGhIJKlmNoPQRstuVWXyz"}
+                  value={botTokenInput}
+                  onChange={(e) => setBotTokenInput(e.target.value)}
+                  className="input-field"
+                  style={{ fontSize: "0.86rem", fontFamily: "'JetBrains Mono', monospace" }}
+                />
+
+                <button
+                  type="submit"
+                  disabled={savingTelegram || !botTokenInput.trim()}
+                  className="btn-primary"
+                  style={{ width: "100%", justifyContent: "center" }}
+                >
+                  {savingTelegram ? <RefreshCw size={14} className="animate-spin" /> : <Zap size={14} />}
+                  <span>{savingTelegram ? "Testing & Connecting..." : "Connect Telegram Bot"}</span>
+                </button>
+              </form>
+            </div>
+
+            {/* Step 2: Pair User Account */}
+            <div className="glass-panel" style={{ padding: "24px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
+                <div
+                  style={{
+                    width: "24px",
+                    height: "24px",
+                    borderRadius: "50%",
+                    backgroundColor: "var(--primary-light)",
+                    color: "var(--primary)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "0.8rem",
+                    fontWeight: 700,
+                  }}
+                >
+                  2
+                </div>
+                <h3 style={{ fontSize: "1rem", fontWeight: 600 }}>Link Your Account</h3>
+              </div>
+
+              <p style={{ color: "var(--text-muted)", fontSize: "0.84rem", lineHeight: 1.5, marginBottom: "16px" }}>
+                Pairing authorizes your personal Telegram account with this BuddyAi instance so memories and chat history sync privately.
+              </p>
+
+              {telegramConfig?.isLinked ? (
+                <div
+                  style={{
+                    padding: "16px",
+                    borderRadius: "var(--radius-md)",
+                    backgroundColor: "rgba(16, 185, 129, 0.08)",
+                    border: "1px solid rgba(16, 185, 129, 0.3)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#10b981", fontWeight: 600, fontSize: "0.9rem" }}>
+                    <CheckCircle2 size={16} />
+                    <span>Device Successfully Linked!</span>
+                  </div>
+                  <div style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>
+                    Telegram Chat ID: <code>{telegramConfig.telegramChatId}</code>
+                  </div>
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-faint)", marginTop: "4px" }}>
+                    Send any message to your bot on Telegram to receive live companion replies.
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  <button
+                    type="button"
+                    onClick={handleGeneratePairCode}
+                    disabled={generatingCode || !telegramConfig?.isConfigured}
+                    className="btn-primary"
+                    style={{ width: "100%", justifyContent: "center" }}
+                  >
+                    <Zap size={14} />
+                    <span>{generatingCode ? "Generating..." : "Generate Pairing Code"}</span>
+                  </button>
+
+                  {pairCodeDisplay && (
+                    <div
+                      style={{
+                        padding: "16px",
+                        borderRadius: "var(--radius-md)",
+                        backgroundColor: "var(--bg-input)",
+                        border: "1px solid var(--border-glow)",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "12px",
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: "4px" }}>
+                          Send this exact command to your bot:
+                        </div>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            backgroundColor: "var(--bg-surface)",
+                            border: "1px solid var(--border-subtle)",
+                            borderRadius: "var(--radius-sm)",
+                            padding: "8px 12px",
+                          }}
+                        >
+                          <code
+                            style={{
+                              fontSize: "1rem",
+                              fontWeight: 700,
+                              fontFamily: "'JetBrains Mono', monospace",
+                              color: "var(--primary)",
+                            }}
+                          >
+                            /start {pairCodeDisplay}
+                          </code>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(`/start ${pairCodeDisplay}`);
+                              setCopiedCommand(true);
+                              setTimeout(() => setCopiedCommand(false), 2000);
+                            }}
+                            className="btn-secondary"
+                            style={{ padding: "4px 10px", fontSize: "0.75rem" }}
+                          >
+                            {copiedCommand ? (
+                              <>
+                                <Check size={12} color="#10b981" />
+                                <span>Copied</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy size={12} />
+                                <span>Copy</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                        <a
+                          href={`https://web.telegram.org/a/#?tgaddr=tg%3A%2F%2Fresolve%3Fdomain%3D${telegramConfig?.botUsername}%26start%3D${pairCodeDisplay}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn-secondary"
+                          style={{
+                            flex: 1,
+                            justifyContent: "center",
+                            fontSize: "0.8rem",
+                            padding: "8px 12px",
+                          }}
+                        >
+                          <span>Open Telegram Web</span>
+                          <ExternalLink size={12} />
+                        </a>
+
+                        <a
+                          href={pairLinkDisplay || `https://t.me/${telegramConfig?.botUsername}?start=${pairCodeDisplay}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn-secondary"
+                          style={{
+                            flex: 1,
+                            justifyContent: "center",
+                            fontSize: "0.8rem",
+                            padding: "8px 12px",
+                          }}
+                        >
+                          <span>Open Telegram App</span>
+                          <ExternalLink size={12} />
+                        </a>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleSyncTelegram}
+                        disabled={syncingTelegram}
+                        className="btn-primary"
+                        style={{ width: "100%", justifyContent: "center", fontSize: "0.82rem" }}
+                      >
+                        <RefreshCw size={14} className={syncingTelegram ? "animate-spin" : ""} />
+                        <span>{syncingTelegram ? "Checking Connection..." : "Check & Sync Pairing Now"}</span>
+                      </button>
+
+                      <div style={{ fontSize: "0.76rem", color: "var(--text-faint)", lineHeight: 1.4 }}>
+                        💡 <strong>No Telegram Desktop installed on this PC?</strong> Simply open Telegram on your phone or tablet, search for <strong>@{telegramConfig?.botUsername}</strong>, and send: <code>/start {pairCodeDisplay}</code>.
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

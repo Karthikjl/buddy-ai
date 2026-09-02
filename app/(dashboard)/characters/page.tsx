@@ -12,6 +12,7 @@ import {
   Heart,
   Smile,
   Zap,
+  Upload,
 } from "lucide-react";
 import CustomDropdown from "@/components/CustomDropdown";
 
@@ -23,9 +24,11 @@ interface Character {
   tagline: string;
   personalityPrompt: string;
   avatarUrl: string | null;
+  customImage?: string | null;
   greeting: string;
   mood: string | null;
   relationship: string | null;
+  affinityPoints?: number;
   isDefault: boolean;
 }
 
@@ -45,6 +48,7 @@ export default function CharactersPage() {
   const [tagline, setTagline] = useState("");
   const [personalityPrompt, setPersonalityPrompt] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("🤖");
+  const [customImage, setCustomImage] = useState<string | null>(null);
   const [greeting, setGreeting] = useState("");
   const [mood, setMood] = useState("friendly");
   const [relationship, setRelationship] = useState("friend");
@@ -120,6 +124,7 @@ export default function CharactersPage() {
           tagline,
           personalityPrompt,
           avatarUrl,
+          customImage,
           greeting: greeting || `Hi! I'm ${name}. Glad to connect with you.`,
           mood,
           relationship,
@@ -294,9 +299,18 @@ export default function CharactersPage() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
+                  overflow: "hidden",
                 }}
               >
-                {char.avatarUrl || "🤖"}
+                {char.customImage ? (
+                  <img
+                    src={char.customImage}
+                    alt={char.name}
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                ) : (
+                  char.avatarUrl || "🤖"
+                )}
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
@@ -469,6 +483,61 @@ export default function CharactersPage() {
                       {emoji}
                     </button>
                   ))}
+                </div>
+
+                {/* Custom Avatar Upload */}
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "12px" }}>
+                  <label
+                    style={{
+                      cursor: "pointer",
+                      padding: "7px 14px",
+                      borderRadius: "var(--radius-md)",
+                      border: "1px dashed var(--border-subtle)",
+                      background: "rgba(255, 255, 255, 0.04)",
+                      fontSize: "0.8rem",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      color: "var(--text-muted)",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <Upload size={14} color="var(--primary)" />
+                    <span>{customImage ? "Change Custom Photo" : "Upload Custom Portrait (JPG/PNG)"}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          if (file.size > 2 * 1024 * 1024) {
+                            alert("Image size should be under 2MB");
+                            return;
+                          }
+                          const reader = new FileReader();
+                          reader.onload = () => setCustomImage(reader.result as string);
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                  {customImage && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <img
+                        src={customImage}
+                        alt="Preview"
+                        style={{ width: "36px", height: "36px", borderRadius: "10px", objectFit: "cover", border: "2px solid var(--primary)" }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setCustomImage(null)}
+                        style={{ color: "#ef4444", fontSize: "0.75rem", background: "none", border: "none", cursor: "pointer" }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
