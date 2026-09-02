@@ -13,6 +13,7 @@ import {
   Smile,
   Zap,
 } from "lucide-react";
+import CustomDropdown from "@/components/CustomDropdown";
 
 interface Character {
   id: string;
@@ -490,15 +491,18 @@ export default function CharactersPage() {
                   <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "6px" }}>
                     Gender
                   </label>
-                  <select
-                    className="input-field"
+                  <CustomDropdown
+                    size="md"
+                    variant="surface"
                     value={gender}
-                    onChange={(e) => setGender(e.target.value)}
-                  >
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="neutral">Neutral / Other</option>
-                  </select>
+                    onChange={setGender}
+                    options={[
+                      { value: "male", label: "Male" },
+                      { value: "female", label: "Female" },
+                      { value: "neutral", label: "Neutral / Other" },
+                    ]}
+                    className="w-full"
+                  />
                 </div>
               </div>
 
@@ -523,34 +527,40 @@ export default function CharactersPage() {
                   <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "6px" }}>
                     Default Mood
                   </label>
-                  <select
-                    className="input-field"
+                  <CustomDropdown
+                    size="md"
+                    variant="surface"
                     value={mood}
-                    onChange={(e) => setMood(e.target.value)}
-                  >
-                    <option value="friendly">Friendly & Warm</option>
-                    <option value="witty">Witty & Sarcastic</option>
-                    <option value="empathetic">Empathetic & Calm</option>
-                    <option value="flirty">Playful & Flirty</option>
-                    <option value="creative">Creative & Visionary</option>
-                    <option value="motivating">High Energy & Motivating</option>
-                  </select>
+                    onChange={setMood}
+                    options={[
+                      { value: "friendly", label: "Friendly & Warm" },
+                      { value: "witty", label: "Witty & Sarcastic" },
+                      { value: "empathetic", label: "Empathetic & Calm" },
+                      { value: "flirty", label: "Playful & Flirty" },
+                      { value: "creative", label: "Creative & Visionary" },
+                      { value: "motivating", label: "High Energy & Motivating" },
+                    ]}
+                    className="w-full"
+                  />
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "6px" }}>
                     Relationship Dynamic
                   </label>
-                  <select
-                    className="input-field"
+                  <CustomDropdown
+                    size="md"
+                    variant="surface"
                     value={relationship}
-                    onChange={(e) => setRelationship(e.target.value)}
-                  >
-                    <option value="friend">Friend</option>
-                    <option value="best friend">Best Friend</option>
-                    <option value="mentor">Mentor & Advisor</option>
-                    <option value="partner">Companion / Partner</option>
-                    <option value="assistant">Personal Assistant</option>
-                  </select>
+                    onChange={setRelationship}
+                    options={[
+                      { value: "friend", label: "Friend" },
+                      { value: "best friend", label: "Best Friend" },
+                      { value: "mentor", label: "Mentor & Advisor" },
+                      { value: "partner", label: "Companion / Partner" },
+                      { value: "assistant", label: "Personal Assistant" },
+                    ]}
+                    className="w-full"
+                  />
                 </div>
               </div>
 

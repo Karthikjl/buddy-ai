@@ -14,7 +14,6 @@ import {
   RotateCcw,
   BookmarkPlus,
   Brain,
-  Download,
   Edit2,
   CheckCheck,
   X,
@@ -23,6 +22,8 @@ import {
   HeartHandshake,
 } from "lucide-react";
 import Link from "next/link";
+import MarkdownMessage from "@/components/MarkdownMessage";
+import CustomDropdown from "@/components/CustomDropdown";
 
 interface MessageItem {
   id?: string;
@@ -406,10 +407,6 @@ export default function ChatPage() {
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
-  const handleExport = (format: "md" | "json") => {
-    window.open(`/api/sessions/${sessionId}/export?format=${format}`, "_blank");
-  };
-
   if (loading) {
     return (
       <div
@@ -592,56 +589,24 @@ export default function ChatPage() {
             {/* Dynamic In-Chat Mood & Dynamic Selectors */}
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
               {/* Mood Dropdown */}
-              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                <Smile size={12} color="var(--primary)" />
-                <select
-                  value={currentMood}
-                  onChange={(e) => handleMoodChange(e.target.value)}
-                  style={{
-                    backgroundColor: "var(--primary-light)",
-                    border: "1px solid var(--border-glow)",
-                    color: "var(--primary)",
-                    fontSize: "0.72rem",
-                    fontWeight: 600,
-                    borderRadius: "var(--radius-full)",
-                    padding: "2px 8px",
-                    outline: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  {MOOD_OPTIONS.map((m) => (
-                    <option key={m.id} value={m.id} style={{ background: "var(--bg-surface)", color: "var(--text-main)" }}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <CustomDropdown
+                value={currentMood}
+                onChange={handleMoodChange}
+                options={MOOD_OPTIONS.map((m) => ({ value: m.id, label: m.label }))}
+                icon={<Smile size={13} color="var(--primary)" />}
+                variant="primary"
+                size="sm"
+              />
 
               {/* Relationship Dropdown */}
-              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                <HeartHandshake size={12} color="var(--accent)" />
-                <select
-                  value={currentRelationship}
-                  onChange={(e) => handleRelationshipChange(e.target.value)}
-                  style={{
-                    backgroundColor: "var(--accent-light)",
-                    border: "1px solid var(--border-subtle)",
-                    color: "var(--accent)",
-                    fontSize: "0.72rem",
-                    fontWeight: 600,
-                    borderRadius: "var(--radius-full)",
-                    padding: "2px 8px",
-                    outline: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  {RELATIONSHIP_OPTIONS.map((r) => (
-                    <option key={r.id} value={r.id} style={{ background: "var(--bg-surface)", color: "var(--text-main)" }}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <CustomDropdown
+                value={currentRelationship}
+                onChange={handleRelationshipChange}
+                options={RELATIONSHIP_OPTIONS.map((r) => ({ value: r.id, label: r.label }))}
+                icon={<HeartHandshake size={13} color="var(--accent)" />}
+                variant="accent"
+                size="sm"
+              />
             </div>
           </div>
         </div>
@@ -657,17 +622,6 @@ export default function ChatPage() {
           >
             <Brain size={14} color="var(--primary)" />
             <span>Memories ({memories.length})</span>
-          </button>
-
-          {/* Export Chat */}
-          <button
-            onClick={() => handleExport("md")}
-            className="btn-secondary"
-            title="Export conversation as Markdown"
-            style={{ fontSize: "0.82rem", padding: "6px 12px" }}
-          >
-            <Download size={14} />
-            <span>Export</span>
           </button>
 
           {/* New Chat */}
@@ -762,7 +716,6 @@ export default function ChatPage() {
                       : "0 4px 20px rgba(0, 0, 0, 0.25)",
                     fontSize: "0.95rem",
                     lineHeight: 1.6,
-                    whiteSpace: "pre-wrap",
                     wordBreak: "break-word",
                     position: "relative",
                   }}
@@ -774,7 +727,7 @@ export default function ChatPage() {
                       <div className="typing-dot" />
                     </div>
                   ) : (
-                    msg.content
+                    <MarkdownMessage content={msg.content} isUser={isUser} />
                   )}
                 </div>
 

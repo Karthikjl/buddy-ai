@@ -487,3 +487,122 @@ input, textarea, select {
   background-size: 400% 100%;
   animation: shimmer 1.6s ease-in-out infinite;
 }
+
+/* Markdown Message Styling */
+.markdown-content {
+  font-size: 0.95rem;
+  line-height: 1.68;
+  word-break: break-word;
+}
+
+.markdown-content p {
+  margin-bottom: 0.75em;
+}
+.markdown-content p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4 {
+  font-weight: 700;
+  margin-top: 0.9em;
+  margin-bottom: 0.4em;
+  line-height: 1.3;
+}
+.markdown-content h1 { font-size: 1.35rem; }
+.markdown-content h2 { font-size: 1.2rem; }
+.markdown-content h3 { font-size: 1.05rem; }
+
+.markdown-content ul,
+.markdown-content ol {
+  padding-left: 1.4em;
+  margin-bottom: 0.75em;
+}
+.markdown-content li {
+  margin-bottom: 0.25em;
+}
+
+.markdown-content blockquote {
+  border-left: 3px solid var(--primary);
+  padding: 6px 14px;
+  margin: 0.75em 0;
+  background: var(--primary-light);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-style: italic;
+  opacity: 0.95;
+}
+
+.markdown-content hr {
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  margin: 1.2em 0;
+}
+
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.8em 0;
+  font-size: 0.88rem;
+}
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid var(--border-subtle);
+  padding: 6px 10px;
+  text-align: left;
+}
+.markdown-content th {
+  background: var(--primary-light);
+  font-weight: 600;
+}
+
+.markdown-content a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.markdown-content a:hover {
+  filter: brightness(1.2);
+}
+
+.markdown-content pre {
+  margin: 0.8em 0;
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+}
+
+.markdown-content code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.88em;
+}
+
+.markdown-content :not(pre) > code {
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--primary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+[data-theme="pearl"] .markdown-content :not(pre) > code {
+  background: #f1f5f9;
+  color: #4338ca;
+  border-color: #cbd5e1;
+}
+
+/* User Bubble Markdown Overrides */
+.markdown-user {
+  color: #ffffff;
+}
+.markdown-user a {
+  color: #ffffff;
+  text-decoration: underline;
+}
+.markdown-user :not(pre) > code {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.3);
+}
