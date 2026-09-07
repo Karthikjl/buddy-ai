@@ -269,7 +269,18 @@ export default function MarketplacePage() {
   };
 
   return (
-    <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "36px 28px", display: "flex", flexDirection: "column", gap: "28px" }}>
+    <div
+      style={{
+        maxWidth: "1200px",
+        margin: "0 auto",
+        padding: "36px 32px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "28px",
+        width: "100%",
+        boxSizing: "border-box",
+      }}
+    >
       {/* Notice */}
       {installedNotice && (
         <div
@@ -298,7 +309,7 @@ export default function MarketplacePage() {
       <div
         className="glass-panel"
         style={{
-          padding: "36px",
+          padding: "32px",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -306,6 +317,8 @@ export default function MarketplacePage() {
           gap: "24px",
           background: "linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(168, 85, 247, 0.08) 100%)",
           border: "1px solid var(--border-glow)",
+          width: "100%",
+          boxSizing: "border-box",
         }}
       >
         <div>
@@ -331,7 +344,16 @@ export default function MarketplacePage() {
       </div>
 
       {/* Category Tabs */}
-      <div style={{ display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "6px" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "8px",
+          overflowX: "auto",
+          paddingBottom: "6px",
+          maxWidth: "100%",
+          scrollbarWidth: "none",
+        }}
+      >
         {CATEGORIES.map((cat) => {
           const Icon = cat.icon;
           const isSelected = selectedCategory === cat.id;
@@ -353,6 +375,7 @@ export default function MarketplacePage() {
                 cursor: "pointer",
                 whiteSpace: "nowrap",
                 transition: "all 0.15s ease",
+                flexShrink: 0,
               }}
             >
               <Icon size={14} />
@@ -363,7 +386,14 @@ export default function MarketplacePage() {
       </div>
 
       {/* Persona Cards Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "22px" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 290px), 1fr))",
+          gap: "22px",
+          width: "100%",
+        }}
+      >
         {filteredCharacters.map((char) => (
           <div
             key={char.id}

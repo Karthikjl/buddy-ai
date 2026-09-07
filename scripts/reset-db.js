@@ -1,10 +1,17 @@
 const { PrismaClient } = require("@prisma/client");
-const bcrypt = require("bcryptjs");
-
 const prisma = new PrismaClient();
 
-async function main() {
-  console.log("Seeding BuddyAi default companion characters...");
+async function reset() {
+  console.log("Resetting database...");
+  await prisma.message.deleteMany();
+  await prisma.chatSession.deleteMany();
+  await prisma.companionMemory.deleteMany();
+  await prisma.apiKey.deleteMany();
+  await prisma.userPreference.deleteMany();
+  await prisma.telegramBotConfig.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.systemSetting.deleteMany();
+  console.log("Cleared all users, chats, keys, and system settings.");
 
   // Pre-configured default characters
   const defaultCharacters = [
@@ -76,16 +83,16 @@ async function main() {
       await prisma.character.create({
         data: char,
       });
-      console.log(`Created default character: ${char.name}`);
     }
   }
 
-  console.log("Database seeded successfully!");
+  const userCount = await prisma.user.count();
+  console.log(`Database is ready! Total users in database: ${userCount}`);
 }
 
-main()
+reset()
   .catch((e) => {
-    console.error(e);
+    console.error("Reset error:", e);
     process.exit(1);
   })
   .finally(async () => {

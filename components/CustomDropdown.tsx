@@ -16,11 +16,13 @@ interface CustomDropdownProps {
   options: DropdownOption[];
   icon?: React.ReactNode;
   size?: "sm" | "md";
-  variant?: "primary" | "accent" | "surface";
+  variant?: "primary" | "accent" | "surface" | "form";
   labelPrefix?: string;
   triggerLabel?: string;
   className?: string;
   align?: "left" | "right";
+  fullWidth?: boolean;
+  disabled?: boolean;
 }
 
 export default function CustomDropdown({
@@ -34,6 +36,8 @@ export default function CustomDropdown({
   triggerLabel,
   className = "",
   align = "left",
+  fullWidth = false,
+  disabled = false,
 }: CustomDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -60,11 +64,23 @@ export default function CustomDropdown({
 
   // Color variants
   const getVariantStyles = () => {
+    if (variant === "form") {
+      return {
+        bg: "var(--bg-input)",
+        border: "1px solid var(--border-subtle)",
+        text: "var(--text-main)",
+        borderRadius: "var(--radius-md)",
+        padding: "10px 14px",
+        activeGlow: "0 0 0 3px var(--primary-light)",
+      };
+    }
     if (variant === "accent") {
       return {
         bg: "var(--accent-light)",
         border: "1px solid var(--border-subtle)",
         text: "var(--accent)",
+        borderRadius: "var(--radius-full)",
+        padding: "4px 10px",
         activeGlow: "0 0 12px var(--accent-light)",
       };
     }
@@ -73,6 +89,8 @@ export default function CustomDropdown({
         bg: "var(--bg-card)",
         border: "1px solid var(--border-subtle)",
         text: "var(--text-main)",
+        borderRadius: "var(--radius-md)",
+        padding: "6px 12px",
         activeGlow: "0 2px 10px rgba(0,0,0,0.06)",
       };
     }
@@ -81,6 +99,8 @@ export default function CustomDropdown({
       bg: "var(--primary-light)",
       border: "1px solid var(--border-glow)",
       text: "var(--primary)",
+      borderRadius: "var(--radius-full)",
+      padding: "4px 10px",
       activeGlow: "0 0 12px var(--primary-light)",
     };
   };
@@ -94,58 +114,74 @@ export default function CustomDropdown({
       className={className}
       style={{
         position: "relative",
-        display: "inline-block",
+        display: fullWidth ? "block" : "inline-block",
+        width: fullWidth ? "100%" : "auto",
         userSelect: "none",
+        zIndex: isOpen ? 50 : 1,
       }}
     >
       {/* Trigger Button */}
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        disabled={disabled}
+        onClick={() => {
+          if (!disabled) setIsOpen(!isOpen);
+        }}
         style={{
-          display: "inline-flex",
+          display: "flex",
           alignItems: "center",
+          justifyContent: fullWidth ? "space-between" : "flex-start",
+          width: fullWidth ? "100%" : "auto",
           gap: isSm ? "6px" : "8px",
-          padding: isSm ? "4px 10px" : "8px 14px",
-          borderRadius: "var(--radius-full)",
+          padding: vStyles.padding,
+          borderRadius: vStyles.borderRadius,
           backgroundColor: vStyles.bg,
           border: vStyles.border,
-          color: vStyles.text,
-          fontSize: isSm ? "0.76rem" : "0.86rem",
+          color: disabled ? "var(--text-faint)" : vStyles.text,
+          fontSize: isSm ? "0.82rem" : "0.9rem",
           fontWeight: 600,
-          cursor: "pointer",
+          cursor: disabled ? "not-allowed" : "pointer",
           outline: "none",
           transition: "all 0.18s ease",
           boxShadow: isOpen ? vStyles.activeGlow : "none",
-          backdropFilter: "blur(8px)",
+          opacity: disabled ? 0.6 : 1,
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.transform = "translateY(-1px)";
-          e.currentTarget.style.filter = "brightness(1.06)";
+          if (!disabled) {
+            e.currentTarget.style.transform = fullWidth ? "none" : "translateY(-1px)";
+            e.currentTarget.style.filter = "brightness(1.04)";
+          }
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.transform = "translateY(0)";
-          e.currentTarget.style.filter = "brightness(1)";
+          if (!disabled) {
+            e.currentTarget.style.transform = "none";
+            e.currentTarget.style.filter = "brightness(1)";
+          }
         }}
       >
-        {icon && (
-          <span style={{ display: "flex", alignItems: "center" }}>{icon}</span>
-        )}
-        <span>
-          {labelPrefix && (
-            <span style={{ opacity: 0.7, fontWeight: 500, marginRight: "4px" }}>
-              {labelPrefix}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", overflow: "hidden" }}>
+          {selectedOption?.icon || icon ? (
+            <span style={{ display: "flex", alignItems: "center" }}>
+              {selectedOption?.icon || icon}
             </span>
-          )}
-          {triggerLabel || (selectedOption ? selectedOption.label : "Select...")}
-        </span>
+          ) : null}
+          <span style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
+            {labelPrefix && (
+              <span style={{ opacity: 0.7, fontWeight: 500, marginRight: "4px" }}>
+                {labelPrefix}
+              </span>
+            )}
+            {triggerLabel || (selectedOption ? selectedOption.label : "Select...")}
+          </span>
+        </div>
         <ChevronDown
-          size={isSm ? 12 : 14}
+          size={isSm ? 13 : 15}
           style={{
             transition: "transform 0.2s ease",
             transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
             opacity: 0.8,
-            marginLeft: "2px",
+            marginLeft: "6px",
+            flexShrink: 0,
           }}
         />
       </button>
@@ -158,14 +194,15 @@ export default function CustomDropdown({
             top: "calc(100% + 6px)",
             [align === "right" ? "right" : "left"]: 0,
             zIndex: 9999,
-            minWidth: isSm ? "170px" : "200px",
+            minWidth: fullWidth ? "100%" : isSm ? "170px" : "200px",
+            width: fullWidth ? "100%" : "auto",
             maxHeight: "260px",
             overflowY: "auto",
             backgroundColor: "var(--bg-surface)",
             border: "1px solid var(--border-subtle)",
             borderRadius: "var(--radius-md)",
             boxShadow:
-              "0 12px 36px rgba(0, 0, 0, 0.18), 0 4px 12px rgba(0,0,0,0.08)",
+              "0 14px 36px rgba(0, 0, 0, 0.22), 0 4px 12px rgba(0,0,0,0.08)",
             padding: "6px",
             backdropFilter: "blur(20px)",
             animation: "dropdownFadeIn 0.15s ease",

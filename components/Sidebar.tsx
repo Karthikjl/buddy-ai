@@ -9,14 +9,19 @@ import {
   Sparkles,
   LayoutDashboard,
   Users,
-  KeyRound,
   Settings,
+  Shield,
   MessageSquare,
   LogOut,
   Plus,
   Trash2,
   Menu,
   X,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ChevronLeft,
+  ChevronRight,
+  Search,
 } from "lucide-react";
 
 interface ChatSessionItem {
@@ -40,6 +45,27 @@ export default function Sidebar() {
   const [sessions, setSessions] = useState<ChatSessionItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isOpenMobile, setIsOpenMobile] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // Initialize collapse preference from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("buddyai_sidebar_collapsed");
+      if (saved === "true") {
+        setIsCollapsed(true);
+      }
+    } catch (e) {}
+  }, []);
+
+  const toggleCollapse = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("buddyai_sidebar_collapsed", String(next));
+      } catch (e) {}
+      return next;
+    });
+  };
 
   const fetchSessions = async () => {
     try {
@@ -80,6 +106,9 @@ export default function Sidebar() {
     { label: "Characters", href: "/characters", icon: Users },
     { label: "Marketplace", href: "/marketplace", icon: Sparkles },
     { label: "Keys & Settings", href: "/settings", icon: Settings },
+    ...((session?.user?.role === "SUPER_ADMIN" || session?.user?.role === "ADMIN")
+      ? [{ label: "User Management", href: "/admin/users", icon: Shield }]
+      : []),
   ];
 
   return (
@@ -98,6 +127,7 @@ export default function Sidebar() {
           borderRadius: "var(--radius-md)",
           color: "var(--text-main)",
           display: "none",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
         }}
         className="mobile-menu-btn"
         aria-label="Toggle menu"
@@ -121,8 +151,8 @@ export default function Sidebar() {
 
       <aside
         style={{
-          width: "280px",
-          minWidth: "280px",
+          width: isCollapsed ? "74px" : "280px",
+          minWidth: isCollapsed ? "74px" : "280px",
           height: "100vh",
           display: "flex",
           flexDirection: "column",
@@ -131,24 +161,92 @@ export default function Sidebar() {
           position: "sticky",
           top: 0,
           zIndex: 50,
-          padding: "20px 16px",
+          padding: isCollapsed ? "20px 10px" : "20px 16px",
+          transition: "width 0.25s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s ease",
+          boxSizing: "border-box",
+          overflow: "hidden",
         }}
       >
-        {/* Brand Header */}
-        <Link
-          href="/dashboard"
-          prefetch={false}
+        {/* Brand Header with Toggle Button */}
+        <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "10px",
-            padding: "8px 12px",
-            marginBottom: "24px",
-            textDecoration: "none",
+            justifyContent: isCollapsed ? "center" : "space-between",
+            marginBottom: "20px",
+            padding: isCollapsed ? "0" : "0 4px",
           }}
         >
-          <Logo size={36} withText={true} subtitle="Private Companion Hub" />
-        </Link>
+          <Link
+            href="/dashboard"
+            prefetch={false}
+            title="BuddyAi Dashboard"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              textDecoration: "none",
+              overflow: "hidden",
+            }}
+          >
+            <Logo size={34} withText={!isCollapsed} subtitle="Private Companion Hub" />
+          </Link>
+
+          {/* Desktop Toggle Button */}
+          <button
+            type="button"
+            onClick={toggleCollapse}
+            title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            style={{
+              display: isCollapsed ? "none" : "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "28px",
+              height: "28px",
+              borderRadius: "6px",
+              background: "rgba(255, 255, 255, 0.05)",
+              border: "1px solid var(--border-subtle)",
+              color: "var(--text-muted)",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "var(--primary)";
+              e.currentTarget.style.borderColor = "var(--primary)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "var(--text-muted)";
+              e.currentTarget.style.borderColor = "var(--border-subtle)";
+            }}
+          >
+            <PanelLeftClose size={16} />
+          </button>
+        </div>
+
+        {/* Collapsed Expand Quick Button */}
+        {isCollapsed && (
+          <button
+            type="button"
+            onClick={toggleCollapse}
+            title="Expand sidebar"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "36px",
+              height: "28px",
+              margin: "0 auto 16px auto",
+              borderRadius: "6px",
+              background: "var(--primary-light)",
+              border: "1px solid var(--border-glow)",
+              color: "var(--primary)",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+          >
+            <PanelLeftOpen size={16} />
+          </button>
+        )}
 
         {/* Primary Navigation */}
         <nav style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -160,11 +258,13 @@ export default function Sidebar() {
                 key={item.href}
                 href={item.href}
                 prefetch={false}
+                title={isCollapsed ? item.label : undefined}
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "12px",
-                  padding: "10px 14px",
+                  justifyContent: isCollapsed ? "center" : "flex-start",
+                  gap: isCollapsed ? "0" : "12px",
+                  padding: isCollapsed ? "10px" : "10px 14px",
                   borderRadius: "var(--radius-md)",
                   color: isActive ? "var(--primary)" : "var(--text-muted)",
                   backgroundColor: isActive ? "var(--primary-light)" : "transparent",
@@ -174,8 +274,8 @@ export default function Sidebar() {
                   transition: "all 0.15s ease",
                 }}
               >
-                <Icon size={18} color={isActive ? "var(--primary)" : "currentColor"} />
-                {item.label}
+                <Icon size={18} color={isActive ? "var(--primary)" : "currentColor"} style={{ flexShrink: 0 }} />
+                {!isCollapsed && <span style={{ whiteSpace: "nowrap" }}>{item.label}</span>}
               </Link>
             );
           })}
@@ -184,25 +284,27 @@ export default function Sidebar() {
         {/* Active Conversations Section */}
         <div
           style={{
-            marginTop: "24px",
+            marginTop: "20px",
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
-            padding: "0 8px 8px 8px",
+            justifyContent: isCollapsed ? "center" : "space-between",
+            padding: isCollapsed ? "8px 0" : "0 8px 8px 8px",
             borderBottom: "1px solid var(--border-subtle)",
           }}
         >
-          <span
-            style={{
-              fontSize: "0.75rem",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: "var(--text-faint)",
-            }}
-          >
-            Conversations
-          </span>
+          {!isCollapsed && (
+            <span
+              style={{
+                fontSize: "0.75rem",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                color: "var(--text-faint)",
+              }}
+            >
+              Conversations
+            </span>
+          )}
           <Link
             href="/characters"
             prefetch={false}
@@ -211,11 +313,13 @@ export default function Sidebar() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              width: "22px",
-              height: "22px",
+              width: "24px",
+              height: "24px",
               borderRadius: "6px",
-              background: "rgba(255,255,255,0.06)",
-              color: "var(--text-muted)",
+              background: "var(--primary-light)",
+              border: "1px solid var(--border-glow)",
+              color: "var(--primary)",
+              textDecoration: "none",
             }}
           >
             <Plus size={14} />
@@ -223,90 +327,109 @@ export default function Sidebar() {
         </div>
 
         {/* Conversation Search Bar */}
-        <div style={{ marginTop: "10px", marginBottom: "6px" }}>
-          <input
-            type="text"
-            placeholder="Search chats..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "7px 12px",
-              fontSize: "0.8rem",
-              borderRadius: "var(--radius-sm)",
-              backgroundColor: "rgba(255, 255, 255, 0.04)",
-              border: "1px solid var(--border-subtle)",
-              color: "var(--text-main)",
-              outline: "none",
-            }}
-          />
-        </div>
+        {!isCollapsed && (
+          <div style={{ marginTop: "10px", marginBottom: "6px" }}>
+            <div style={{ position: "relative" }}>
+              <Search
+                size={13}
+                style={{
+                  position: "absolute",
+                  left: "10px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "var(--text-faint)",
+                }}
+              />
+              <input
+                type="text"
+                placeholder="Search chats..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "7px 10px 7px 28px",
+                  fontSize: "0.8rem",
+                  borderRadius: "var(--radius-sm)",
+                  backgroundColor: "rgba(255, 255, 255, 0.04)",
+                  border: "1px solid var(--border-subtle)",
+                  color: "var(--text-main)",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+          </div>
+        )}
 
+        {/* Session List */}
         <div
           style={{
             flex: 1,
             overflowY: "auto",
-            marginTop: "4px",
+            marginTop: "6px",
             display: "flex",
             flexDirection: "column",
             gap: "4px",
+            scrollbarWidth: "none",
           }}
         >
-        {(() => {
-          const displayedSessions = sessions.filter((s) => {
-            if (!searchQuery.trim()) return true;
-            const q = searchQuery.toLowerCase();
-            return (
-              s.title.toLowerCase().includes(q) ||
-              s.character.name.toLowerCase().includes(q) ||
-              s.messages.some((m) => m.content.toLowerCase().includes(q))
-            );
-          });
+          {(() => {
+            const displayedSessions = sessions.filter((s) => {
+              if (!searchQuery.trim()) return true;
+              const q = searchQuery.toLowerCase();
+              return (
+                s.title.toLowerCase().includes(q) ||
+                s.character.name.toLowerCase().includes(q) ||
+                s.messages.some((m) => m.content.toLowerCase().includes(q))
+              );
+            });
 
-          if (displayedSessions.length === 0) {
-            return (
-              <div
-                style={{
-                  padding: "24px 12px",
-                  textAlign: "center",
-                  color: "var(--text-faint)",
-                  fontSize: "0.82rem",
-                }}
-              >
-                {searchQuery ? "No matching conversations." : "No active chats yet."}
-                <br />
-                <Link
-                  href="/characters"
-                  prefetch={false}
-                  style={{ color: "var(--primary)", marginTop: "6px", display: "inline-block" }}
+            if (displayedSessions.length === 0) {
+              if (isCollapsed) return null;
+              return (
+                <div
+                  style={{
+                    padding: "20px 8px",
+                    textAlign: "center",
+                    color: "var(--text-faint)",
+                    fontSize: "0.8rem",
+                  }}
                 >
-                  Pick a buddy to talk!
-                </Link>
-              </div>
-            );
-          }
+                  {searchQuery ? "No matching chats." : "No active chats."}
+                  <br />
+                  <Link
+                    href="/characters"
+                    prefetch={false}
+                    style={{ color: "var(--primary)", marginTop: "4px", display: "inline-block", fontWeight: 600 }}
+                  >
+                    Start talking!
+                  </Link>
+                </div>
+              );
+            }
 
-          return displayedSessions.map((s) => {
-            const isActive = pathname === `/chat/${s.id}`;
-            return (
-              <Link
-                key={s.id}
-                href={`/chat/${s.id}`}
-                prefetch={false}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "8px 10px",
-                  borderRadius: "var(--radius-sm)",
-                  backgroundColor: isActive ? "var(--primary-light)" : "transparent",
-                  border: isActive ? "1px solid var(--border-glow)" : "1px solid transparent",
-                  color: isActive ? "var(--primary)" : "var(--text-muted)",
-                  fontWeight: isActive ? 600 : 400,
-                  fontSize: "0.87rem",
-                  transition: "background 0.15s ease",
-                }}
-              >
+            return displayedSessions.map((s) => {
+              const isActive = pathname === `/chat/${s.id}`;
+              return (
+                <Link
+                  key={s.id}
+                  href={`/chat/${s.id}`}
+                  prefetch={false}
+                  title={isCollapsed ? `${s.character?.name || s.title}` : undefined}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: isCollapsed ? "center" : "space-between",
+                    padding: isCollapsed ? "8px" : "8px 10px",
+                    borderRadius: "var(--radius-sm)",
+                    backgroundColor: isActive ? "var(--primary-light)" : "transparent",
+                    border: isActive ? "1px solid var(--border-glow)" : "1px solid transparent",
+                    color: isActive ? "var(--primary)" : "var(--text-muted)",
+                    fontWeight: isActive ? 600 : 400,
+                    fontSize: "0.87rem",
+                    transition: "background 0.15s ease",
+                  }}
+                >
                   <div
                     style={{
                       display: "flex",
@@ -315,35 +438,42 @@ export default function Sidebar() {
                       overflow: "hidden",
                     }}
                   >
-                    <span style={{ fontSize: "1.1rem" }}>
+                    <span style={{ fontSize: "1.15rem", flexShrink: 0 }}>
                       {s.character?.avatarUrl || "🤖"}
                     </span>
-                    <span
-                      style={{
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        maxWidth: "140px",
-                      }}
-                    >
-                      {s.character?.name || s.title}
-                    </span>
+                    {!isCollapsed && (
+                      <span
+                        style={{
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          maxWidth: "140px",
+                        }}
+                      >
+                        {s.character?.name || s.title}
+                      </span>
+                    )}
                   </div>
-                  <button
-                    onClick={(e) => handleDeleteSession(e, s.id)}
-                    title="Delete conversation"
-                    style={{
-                      padding: "4px",
-                      borderRadius: "4px",
-                      color: "var(--text-faint)",
-                      opacity: 0.6,
-                      transition: "opacity 0.15s ease",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                    onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
-                  >
-                    <Trash2 size={13} />
-                  </button>
+                  {!isCollapsed && (
+                    <button
+                      onClick={(e) => handleDeleteSession(e, s.id)}
+                      title="Delete conversation"
+                      style={{
+                        padding: "4px",
+                        borderRadius: "4px",
+                        color: "var(--text-faint)",
+                        opacity: 0.6,
+                        transition: "opacity 0.15s ease",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                      onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
                 </Link>
               );
             });
@@ -358,52 +488,67 @@ export default function Sidebar() {
             borderTop: "1px solid var(--border-subtle)",
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
+            justifyContent: isCollapsed ? "center" : "space-between",
+            flexDirection: isCollapsed ? "column" : "row",
+            gap: isCollapsed ? "10px" : "0",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", overflow: "hidden" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              overflow: "hidden",
+              justifyContent: isCollapsed ? "center" : "flex-start",
+            }}
+          >
             <div
+              title={isCollapsed ? (session?.user?.name || "User") : undefined}
               style={{
-                width: "32px",
-                height: "32px",
+                width: "34px",
+                height: "34px",
                 borderRadius: "50%",
-                background: "linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%)",
+                background: "linear-gradient(135deg, var(--primary) 0%, #06b6d4 100%)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 fontWeight: 700,
                 fontSize: "0.85rem",
                 color: "#fff",
+                flexShrink: 0,
               }}
             >
               {session?.user?.name ? session.user.name.charAt(0).toUpperCase() : "U"}
             </div>
-            <div style={{ overflow: "hidden" }}>
-              <div
-                style={{
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  maxWidth: "120px",
-                }}
-              >
-                {session?.user?.name || "Buddy Explorer"}
+            {!isCollapsed && (
+              <div style={{ overflow: "hidden" }}>
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    maxWidth: "120px",
+                  }}
+                >
+                  {session?.user?.name || "Buddy Explorer"}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span
+                    style={{
+                      fontSize: "0.68rem",
+                      color: session?.user?.role === "SUPER_ADMIN" ? "#fbbf24" : session?.user?.role === "ADMIN" ? "#60a5fa" : "var(--text-faint)",
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.04em",
+                    }}
+                  >
+                    {session?.user?.role ? session.user.role.replace("_", " ") : "USER"}
+                  </span>
+                </div>
               </div>
-              <div
-                style={{
-                  fontSize: "0.72rem",
-                  color: "var(--text-faint)",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  maxWidth: "120px",
-                }}
-              >
-                {session?.user?.email || "Local user"}
-              </div>
-            </div>
+            )}
           </div>
 
           <button
@@ -414,6 +559,9 @@ export default function Sidebar() {
               borderRadius: "var(--radius-sm)",
               color: "var(--text-faint)",
               transition: "color 0.15s ease",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
             }}
             onMouseEnter={(e) => (e.currentTarget.style.color = "#f87171")}
             onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-faint)")}

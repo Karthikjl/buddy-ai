@@ -1,14 +1,23 @@
 # 🤖 BuddyAi - Private AI Companion Platform
 
 > **Your 100% private, sovereign, and multi-platform AI companion hub.**  
-> Plug in your own LLM API keys (OpenRouter, Groq, Ollama, OpenAI, DeepSeek), converse with bespoke personalities across Web & Telegram, and build emotional affinity with lifelong contextual memory.
+> Plug in your own LLM API keys (**OpenRouter**, **OpenAI**, **Google Gemini**, **Ollama**, or any **Custom OpenAI-Compatible** provider), converse with bespoke personalities across Web & Telegram, and build emotional affinity with lifelong contextual memory.
 
 ---
 
 ## ✨ Features
 
 - **🔐 100% Sovereign & Local-First**: Runs on a local SQLite database (`dev.db`). No external servers, no third-party telemetry, no cloud lock-in.
-- **🔑 Bring-Your-Own-Model (BYO-Key)**: Store your API keys safely with AES-256-GCM encryption. Connect to OpenRouter, Groq, Ollama (Local), OpenAI, DeepSeek, or any OpenAI-compatible endpoint.
+- **🔑 Bring-Your-Own-Model (BYO-Key)**: Store your API keys safely with AES-256-GCM encryption. Built-in presets for:
+  - **OpenRouter** (Multi-model router)
+  - **OpenAI** (`gpt-4o`, `gpt-4o-mini`, `o1-mini`, etc.)
+  - **Google Gemini** (`gemini-2.0-flash`, `gemini-1.5-flash`, `gemini-1.5-pro`, `gemini-2.0-flash-lite`)
+  - **Ollama (Local)** with dual-stack localhost / 127.0.0.1 fallback
+  - **Custom OpenAI-Compatible** endpoints (e.g. self-hosted vLLM, LM Studio, LiteLLM)
+- **⚡ On-Demand Live Model Discovery**: Click the **⚡ Fetch Live Models** button to dynamically query and inspect live available models directly from your provider's API.
+- **🛡️ Enterprise-Grade Login Rate Limiting & Lockout Management**:
+  - Configurable sliding window duration (minutes) and max attempt thresholds with instant auto-saving.
+  - Searchable user lockout picker with dropdown support to inspect and purge active lockouts for specific users or globally.
 - **📱 Telegram Companion Bot**: Talk with your AI companions on-the-go via Telegram. Includes continuous background long-polling, 1-click account pairing, `/switch` inline keyboards, and live 2-way database synchronization.
 - **🧠 Semantic Long-Term Memory (Local RAG)**: Companions remember facts, preferences, and details about your life using local BM25/TF-IDF semantic relevance ranking.
 - **🎙️ Voice Immersion (STT & TTS)**:
@@ -26,11 +35,12 @@
 - **Framework**: [Next.js 14 (App Router)](https://nextjs.org/)
 - **Database & ORM**: [Prisma ORM](https://www.prisma.io/) with [SQLite](https://sqlite.org/)
 - **Authentication**: [NextAuth.js](https://next-auth.js.org/) with credentials provider & bcrypt hashing
-- **Security**: Native Node.js `crypto` with AES-256-GCM encryption
+- **Security**: Native Node.js `crypto` with AES-256-GCM encryption & in-memory sliding window rate limiting
 - **Styling**: Vanilla CSS custom design system with Glassmorphism, CSS Variables, and CSS Shimmer loaders
 - **Markdown & Code**: `react-markdown` + `remark-gfm` with 1-click code copying
 - **Voice & Speech**: Web Speech API (SpeechRecognition + SpeechSynthesis)
 - **Multi-Platform**: Telegram Bot API with long-polling daemon
+- **Containerization**: Multi-stage Docker + Docker Compose
 
 ---
 
@@ -53,7 +63,7 @@ cp .env.example .env
 ```
 *(Optionally change `NEXTAUTH_SECRET` and `ENCRYPTION_SECRET` to random 32-character strings).*
 
-### 4. Initialize database and seed companions
+### 4. Initialize database and seed default companions
 ```bash
 npx prisma db push
 node prisma/seed.js
@@ -61,14 +71,14 @@ node prisma/seed.js
 
 ### 5. Start the development server
 ```bash
-npm run dev -p 3005
+npm run dev
 ```
 
-Open [http://localhost:3005](http://localhost:3005) in your browser.
+Open [http://localhost:3000](http://localhost:3000) (or configured port) in your browser.
 
-**Demo Credentials**:
-- **Email**: `user@buddyai.local`
-- **Password**: `buddy123`
+**First-Run Admin Setup**:
+- The first user who creates an account is automatically assigned as the **Super Admin** with full administrative rights.
+- Super Admins can access the **User Management Panel** (`/admin/users`) to toggle public signups on/off, provision user/admin accounts, configure global login rate limits, search and reset user lockouts, force password resets, and delete accounts.
 
 ---
 
@@ -115,12 +125,13 @@ BuddyAi/
 │   │   ├── characters/      # Companion roster & custom character builder
 │   │   ├── chat/[id]/       # Real-time streaming chat room
 │   │   ├── marketplace/     # Community persona hub & .buddy.json sharing
-│   │   └── settings/        # BYO-Keys, Appearance, Telegram Sync, Data Vault
+│   │   ├── settings/        # BYO-Keys, Live Model Fetching, Appearance, Telegram Sync, Data Vault
+│   │   └── admin/users/     # User Management, Login Rate Limiting & Lockout Reset Panel
 │   ├── api/                 # Next.js App Router API endpoints
 │   ├── globals.css          # Core design system & theme tokens
 │   └── layout.tsx           # Anti-FOUC theme injector & Session provider
-├── components/              # Modular UI components (Markdown, Voice, Dropdown)
-├── lib/                     # Crypto, Auth, LLM client, Semantic RAG & Telegram
+├── components/              # Modular UI components (CustomDropdown, Markdown, Voice)
+├── lib/                     # Crypto, Auth, LLM client, Semantic RAG & Rate Limiter
 ├── prisma/
 │   ├── schema.prisma        # SQLite schema
 │   └── seed.js              # Seed data for default companions

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 import {
   KeyRound,
@@ -22,6 +22,15 @@ import {
   Upload,
   Clock,
   BellRing,
+  Save,
+  RotateCcw,
+  Loader2,
+  Sparkles,
+  Edit3,
+  Layers,
+  ListFilter,
+  Search,
+  ChevronDown,
 } from "lucide-react";
 
 interface ApiKeyInfo {
@@ -43,42 +52,93 @@ const PROVIDER_PRESETS = [
     models: [
       "meta-llama/llama-3.3-70b-instruct",
       "deepseek/deepseek-chat",
+      "deepseek/deepseek-r1",
       "anthropic/claude-3.5-sonnet",
       "openai/gpt-4o-mini",
+      "google/gemini-2.0-flash-exp:free",
     ],
   },
   {
     id: "openai",
     name: "OpenAI",
     baseUrl: "https://api.openai.com/v1",
-    models: ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"],
+    models: ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "o1-mini", "gpt-3.5-turbo"],
   },
   {
-    id: "groq",
-    name: "Groq",
-    baseUrl: "https://api.groq.com/openai/v1",
-    models: ["llama-3.3-70b-versatile", "mixtral-8x7b-32768"],
+    id: "gemini",
+    name: "Google Gemini",
+    baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+    models: [
+      "gemini-2.0-flash",
+      "gemini-1.5-flash",
+      "gemini-1.5-pro",
+      "gemini-2.0-flash-lite",
+    ],
   },
   {
     id: "ollama",
     name: "Ollama (Local)",
     baseUrl: "http://localhost:11434/v1",
-    models: ["llama3", "mistral", "qwen2.5"],
+    models: ["llama3.3", "llama3.2", "deepseek-r1", "mistral", "qwen2.5", "phi3"],
   },
   {
     id: "custom",
     name: "Custom OpenAI-Compatible",
-    baseUrl: "https://api.together.xyz/v1",
-    models: ["meta-llama/Llama-3-70b-chat-hf"],
+    baseUrl: "https://api.your-provider.com/v1",
+    models: ["custom-model-id"],
   },
 ];
 
 export default function SettingsPage() {
-  const { theme, setTheme, fontStyle, setFontStyle, bubbleStyle, setBubbleStyle } = useTheme();
+  const {
+    theme,
+    setTheme,
+    fontStyle,
+    setFontStyle,
+    bubbleStyle,
+    setBubbleStyle,
+    savePreferences,
+    isSavingPreferences,
+  } = useTheme();
 
-  const [activeTab, setActiveTab] = useState<"keys" | "appearance" | "telegram" | "vault">("keys");
+  const [appearanceNotice, setAppearanceNotice] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+
+  const handleSaveAppearance = async () => {
+    const res = await savePreferences();
+    if (res.success) {
+      setAppearanceNotice({ type: "success", text: res.message });
+      setTimeout(() => setAppearanceNotice(null), 4000);
+    } else {
+      setAppearanceNotice({ type: "error", text: res.message });
+    }
+  };
+
+  const handleResetAppearance = async () => {
+    const res = await savePreferences("pearl", "sans", "modern");
+    if (res.success) {
+      setAppearanceNotice({
+        type: "success",
+        text: "Reset to default Pure Pearl White theme and saved!",
+      });
+      setTimeout(() => setAppearanceNotice(null), 4000);
+    } else {
+      setAppearanceNotice({ type: "error", text: res.message });
+    }
+  };
+
+  const [activeTab, setActiveTab] = useState<"keys" | "appearance" | "telegram" | "vault" | "security">("keys");
   const [keys, setKeys] = useState<ApiKeyInfo[]>([]);
   const [loadingKeys, setLoadingKeys] = useState(true);
+
+  // Security and Password state
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordNotice, setPasswordNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [savingPassword, setSavingPassword] = useState(false);
 
   // Vault and Proactive state
   const [restoringVault, setRestoringVault] = useState(false);
@@ -111,6 +171,37 @@ export default function SettingsPage() {
   const [baseUrl, setBaseUrl] = useState("https://openrouter.ai/api/v1");
   const [apiKey, setApiKey] = useState("");
   const [model, setModel] = useState("meta-llama/llama-3.3-70b-instruct");
+  const [fetchedModels, setFetchedModels] = useState<string[]>(
+    PROVIDER_PRESETS[0].models
+  );
+  const [fetchingModels, setFetchingModels] = useState(false);
+  const [fetchModelStatus, setFetchModelStatus] = useState<{
+    message: string;
+    error?: boolean;
+  } | null>(null);
+  const [isCustomModelInput, setIsCustomModelInput] = useState(false);
+  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const [modelSearchFilter, setModelSearchFilter] = useState("");
+  const modelDropdownRef = useRef<HTMLDivElement>(null);
+  const lastFetchedRef = useRef<string>("");
+
+  // Close model dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        modelDropdownRef.current &&
+        !modelDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsModelDropdownOpen(false);
+      }
+    }
+    if (isModelDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isModelDropdownOpen]);
 
   // Feedback states
   const [testStatus, setTestStatus] = useState<{ loading: boolean; message?: string; error?: boolean } | null>(null);
@@ -262,8 +353,73 @@ export default function SettingsPage() {
     if (preset) {
       setProvider(preset.id);
       setBaseUrl(preset.baseUrl);
-      setModel(preset.models[0]);
-      setLabel(`${preset.name}`);
+      setModel(preset.models[0] || "");
+      setFetchedModels(preset.models || []);
+      setIsCustomModelInput(false);
+      setFetchModelStatus(null);
+      setModelSearchFilter("");
+      setLabel(preset.id === "custom" ? "Custom Provider" : `${preset.name}`);
+    }
+  };
+
+  const handleFetchModels = async (overrideBaseUrl?: string, overrideApiKey?: string) => {
+    const urlToFetch = (overrideBaseUrl !== undefined ? overrideBaseUrl : baseUrl).trim();
+    const keyToFetch = (overrideApiKey !== undefined ? overrideApiKey : apiKey).trim();
+
+    if (!urlToFetch) {
+      setFetchModelStatus({
+        message: "Please enter a Base URL first.",
+        error: true,
+      });
+      return;
+    }
+
+    setFetchingModels(true);
+    setFetchModelStatus(null);
+
+    try {
+      const res = await fetch("/api/models/fetch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          baseUrl: urlToFetch,
+          apiKey: keyToFetch || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        if (data.requiresAuth) {
+          setFetchModelStatus({
+            message: "API key required by this provider to fetch live account models.",
+            error: true,
+          });
+        } else {
+          setFetchModelStatus({
+            message: data.message || data.error || "Failed to fetch live models from endpoint.",
+            error: true,
+          });
+        }
+      } else {
+        const liveModels: string[] = data.models || [];
+        if (liveModels.length > 0) {
+          setFetchedModels(liveModels);
+          setFetchModelStatus({
+            message: `Discovered ${liveModels.length} live model(s) from provider!`,
+            error: false,
+          });
+          if (!model || !liveModels.includes(model)) {
+            setModel(liveModels[0]);
+          }
+        }
+      }
+    } catch (err: any) {
+      setFetchModelStatus({
+        message: err.message || "Could not reach models endpoint.",
+        error: true,
+      });
+    } finally {
+      setFetchingModels(false);
     }
   };
 
@@ -450,6 +606,25 @@ export default function SettingsPage() {
           <Database size={16} />
           <span>Data Vault & Backups</span>
         </button>
+
+        <button
+          onClick={() => setActiveTab("security")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "8px 16px",
+            borderRadius: "var(--radius-sm)",
+            fontSize: "0.9rem",
+            fontWeight: 600,
+            backgroundColor: activeTab === "security" ? "var(--primary-light)" : "transparent",
+            color: activeTab === "security" ? "var(--primary)" : "var(--text-muted)",
+            border: activeTab === "security" ? "1px solid var(--border-glow)" : "1px solid transparent",
+          }}
+        >
+          <ShieldCheck size={16} />
+          <span>Account & Security</span>
+        </button>
       </div>
 
       {/* Tab 1: API Keys */}
@@ -480,7 +655,14 @@ export default function SettingsPage() {
           )}
 
           {/* Add New Key Form Card */}
-          <div className="glass-panel" style={{ padding: "28px" }}>
+          <div
+            className="glass-panel"
+            style={{
+              padding: "28px",
+              position: "relative",
+              zIndex: isModelDropdownOpen ? 50 : 2,
+            }}
+          >
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
               <Zap size={20} color="var(--primary)" />
               <h2 style={{ fontSize: "1.25rem", fontWeight: 700 }}>Connect an LLM Provider</h2>
@@ -511,7 +693,16 @@ export default function SettingsPage() {
               ))}
             </div>
 
-            <form onSubmit={handleSaveKey} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <form
+              onSubmit={handleSaveKey}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "16px",
+                position: "relative",
+                zIndex: isModelDropdownOpen ? 50 : 1,
+              }}
+            >
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
                 <div>
                   <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "6px" }}>
@@ -549,28 +740,321 @@ export default function SettingsPage() {
                   </label>
                   <input
                     type="password"
-                    required={provider !== "ollama"}
+                    required={provider !== "ollama" && provider !== "lmstudio" && provider !== "vllm"}
                     className="input-field"
-                    placeholder={provider === "ollama" ? "Optional for local Ollama" : "sk-..."}
+                    placeholder={
+                      provider === "ollama" || provider === "lmstudio" || provider === "vllm"
+                        ? "Optional for local instances"
+                        : "sk-..."
+                    }
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "6px" }}>
-                    Model Identifier
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    className="input-field"
-                    placeholder="e.g. meta-llama/llama-3.3-70b-instruct"
-                    value={model}
-                    onChange={(e) => setModel(e.target.value)}
-                  />
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                    <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--text-muted)" }}>
+                      Model Identifier
+                    </label>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <button
+                        type="button"
+                        onClick={() => handleFetchModels()}
+                        disabled={fetchingModels || !baseUrl}
+                        title="Query live /v1/models endpoint from provider"
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          fontSize: "0.75rem",
+                          fontWeight: 600,
+                          padding: "3px 8px",
+                          borderRadius: "4px",
+                          background: "var(--primary-light)",
+                          color: "var(--primary)",
+                          border: "1px solid var(--border-glow)",
+                          cursor: fetchingModels || !baseUrl ? "not-allowed" : "pointer",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        {fetchingModels ? (
+                          <>
+                            <Loader2 size={11} className="animate-spin" />
+                            <span>Fetching...</span>
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw size={11} />
+                            <span>Fetch Live Models</span>
+                          </>
+                        )}
+                      </button>
+
+                      {fetchedModels.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsCustomModelInput(!isCustomModelInput);
+                            setIsModelDropdownOpen(false);
+                          }}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            fontSize: "0.75rem",
+                            padding: "3px 8px",
+                            borderRadius: "4px",
+                            background: isCustomModelInput ? "var(--primary-light)" : "rgba(255, 255, 255, 0.05)",
+                            color: isCustomModelInput ? "var(--primary)" : "var(--text-muted)",
+                            border: isCustomModelInput ? "1px solid var(--border-glow)" : "1px solid var(--border-subtle)",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                          }}
+                        >
+                          {isCustomModelInput ? (
+                            <>
+                              <ListFilter size={11} />
+                              <span>Select from list</span>
+                            </>
+                          ) : (
+                            <>
+                              <Edit3 size={11} />
+                              <span>Custom Model</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {!isCustomModelInput && fetchedModels.length > 0 ? (
+                    <div
+                      ref={modelDropdownRef}
+                      style={{
+                        position: "relative",
+                        width: "100%",
+                        zIndex: isModelDropdownOpen ? 100 : 1,
+                      }}
+                    >
+                      {/* Custom Sleek Dropdown Trigger */}
+                      <button
+                        type="button"
+                        onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          width: "100%",
+                          padding: "10px 14px",
+                          borderRadius: "var(--radius-md)",
+                          backgroundColor: "var(--bg-input)",
+                          border: isModelDropdownOpen
+                            ? "1px solid var(--border-active)"
+                            : "1px solid var(--border-subtle)",
+                          color: "var(--text-main)",
+                          fontSize: "0.88rem",
+                          fontWeight: 500,
+                          cursor: "pointer",
+                          outline: "none",
+                          boxShadow: isModelDropdownOpen
+                            ? "0 0 0 3px var(--primary-light)"
+                            : "none",
+                          transition: "all 0.18s ease",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", overflow: "hidden" }}>
+                          <Cpu size={15} color="var(--primary)" style={{ flexShrink: 0 }} />
+                          <span style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap", fontFamily: "var(--font-family)" }}>
+                            {model || "Select a model..."}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                          <ChevronDown
+                            size={15}
+                            style={{
+                              transition: "transform 0.2s ease",
+                              transform: isModelDropdownOpen ? "rotate(180deg)" : "rotate(0deg)",
+                              color: "var(--text-muted)",
+                            }}
+                          />
+                        </div>
+                      </button>
+
+                      {/* Floating Popover Search & Options Menu */}
+                      {isModelDropdownOpen && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "calc(100% + 6px)",
+                            left: 0,
+                            right: 0,
+                            zIndex: 9999,
+                            backgroundColor: "var(--bg-surface)",
+                            border: "1px solid var(--border-subtle)",
+                            borderRadius: "var(--radius-md)",
+                            boxShadow: "0 18px 42px rgba(0, 0, 0, 0.28), 0 4px 14px rgba(0,0,0,0.1)",
+                            padding: "8px",
+                            backdropFilter: "blur(24px)",
+                            animation: "dropdownFadeIn 0.15s ease",
+                          }}
+                        >
+                          {/* Search Filter Header */}
+                          <div style={{ position: "relative", marginBottom: "8px" }}>
+                            <Search
+                              size={13}
+                              style={{
+                                position: "absolute",
+                                left: "10px",
+                                top: "50%",
+                                transform: "translateY(-50%)",
+                                color: "var(--text-muted)",
+                              }}
+                            />
+                            <input
+                              type="text"
+                              autoFocus
+                              placeholder="Search available models..."
+                              value={modelSearchFilter}
+                              onChange={(e) => setModelSearchFilter(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              style={{
+                                width: "100%",
+                                padding: "6px 10px 6px 30px",
+                                borderRadius: "var(--radius-sm)",
+                                backgroundColor: "var(--bg-card)",
+                                border: "1px solid var(--border-subtle)",
+                                color: "var(--text-main)",
+                                fontSize: "0.82rem",
+                                outline: "none",
+                              }}
+                            />
+                          </div>
+
+                          {/* Quick Custom Input Action */}
+                          <div
+                            onClick={() => {
+                              setIsCustomModelInput(true);
+                              setIsModelDropdownOpen(false);
+                            }}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              padding: "7px 10px",
+                              borderRadius: "var(--radius-sm)",
+                              fontSize: "0.82rem",
+                              fontWeight: 600,
+                              color: "var(--primary)",
+                              backgroundColor: "var(--primary-light)",
+                              cursor: "pointer",
+                              marginBottom: "6px",
+                              border: "1px dashed var(--border-glow)",
+                            }}
+                          >
+                            <Edit3 size={13} />
+                            <span>Type custom model identifier...</span>
+                          </div>
+
+                          {/* Model List */}
+                          <div style={{ maxHeight: "230px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "2px" }}>
+                            {fetchedModels
+                              .filter((m) =>
+                                m.toLowerCase().includes(modelSearchFilter.toLowerCase())
+                              )
+                              .map((m) => {
+                                const isSelected = m === model;
+                                return (
+                                  <div
+                                    key={m}
+                                    onClick={() => {
+                                      setModel(m);
+                                      setIsModelDropdownOpen(false);
+                                      setModelSearchFilter("");
+                                    }}
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "space-between",
+                                      padding: "7px 10px",
+                                      borderRadius: "var(--radius-sm)",
+                                      fontSize: "0.83rem",
+                                      fontWeight: isSelected ? 600 : 400,
+                                      color: isSelected ? "var(--primary)" : "var(--text-main)",
+                                      backgroundColor: isSelected
+                                        ? "var(--primary-light)"
+                                        : "transparent",
+                                      cursor: "pointer",
+                                      transition: "all 0.12s ease",
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      if (!isSelected) {
+                                        e.currentTarget.style.backgroundColor = "var(--bg-card-hover)";
+                                      }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      if (!isSelected) {
+                                        e.currentTarget.style.backgroundColor = "transparent";
+                                      }
+                                    }}
+                                  >
+                                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                      {m}
+                                    </span>
+                                    {isSelected && (
+                                      <Check size={14} color="var(--primary)" strokeWidth={2.5} style={{ flexShrink: 0, marginLeft: "8px" }} />
+                                    )}
+                                  </div>
+                                );
+                              })}
+
+                            {fetchedModels.filter((m) =>
+                              m.toLowerCase().includes(modelSearchFilter.toLowerCase())
+                            ).length === 0 && (
+                              <div style={{ padding: "12px", textAlign: "center", fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                                No models matching &quot;{modelSearchFilter}&quot;
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      required
+                      className="input-field"
+                      placeholder="e.g. meta-llama/llama-3.3-70b-instruct or my-model"
+                      value={model}
+                      onChange={(e) => setModel(e.target.value)}
+                    />
+                  )}
                 </div>
               </div>
+
+              {/* Model Fetch Status banner */}
+              {fetchModelStatus && (
+                <div
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "0.82rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    backgroundColor: fetchModelStatus.error
+                      ? "rgba(239, 68, 68, 0.1)"
+                      : "rgba(16, 185, 129, 0.1)",
+                    color: fetchModelStatus.error ? "#fca5a5" : "#6ee7b7",
+                    border: `1px solid ${
+                      fetchModelStatus.error ? "rgba(239,68,68,0.25)" : "rgba(16,185,129,0.25)"
+                    }`,
+                  }}
+                >
+                  {fetchModelStatus.error ? <AlertCircle size={14} /> : <CheckCircle2 size={14} />}
+                  <span>{fetchModelStatus.message}</span>
+                </div>
+              )}
 
               {/* Test status banner if present */}
               {testStatus && (
@@ -614,7 +1098,10 @@ export default function SettingsPage() {
           </div>
 
           {/* Saved Keys List */}
-          <div className="glass-panel" style={{ padding: "28px" }}>
+          <div
+            className="glass-panel"
+            style={{ padding: "28px", position: "relative", zIndex: 1 }}
+          >
             <h2 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "16px" }}>
               Stored API Keys (Encrypted)
             </h2>
@@ -684,6 +1171,30 @@ export default function SettingsPage() {
       {/* Tab 2: Appearance */}
       {activeTab === "appearance" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
+          {/* Notification */}
+          {appearanceNotice && (
+            <div
+              style={{
+                padding: "12px 16px",
+                borderRadius: "var(--radius-md)",
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                backgroundColor:
+                  appearanceNotice.type === "success" ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)",
+                border:
+                  appearanceNotice.type === "success"
+                    ? "1px solid rgba(16, 185, 129, 0.3)"
+                    : "1px solid rgba(239, 68, 68, 0.3)",
+                color: appearanceNotice.type === "success" ? "#10b981" : "#ef4444",
+                fontSize: "0.9rem",
+              }}
+            >
+              {appearanceNotice.type === "success" ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+              <span>{appearanceNotice.text}</span>
+            </div>
+          )}
+
           {/* Theme Palette */}
           <div className="glass-panel" style={{ padding: "28px" }}>
             <h2 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "8px" }}>
@@ -719,35 +1230,35 @@ export default function SettingsPage() {
                 },
                 {
                   id: "obsidian",
-                  name: "Cyber Obsidian",
-                  mode: "OLED Black",
-                  bg: "#050608",
-                  cardBg: "#0c0e12",
-                  userBubble: "linear-gradient(135deg, #06b6d4 0%, #0284c7 100%)",
-                  aiBubble: "rgba(20, 24, 34, 0.9)",
-                  accent: "#06b6d4",
+                  name: "Titanium Obsidian",
+                  mode: "Graphite Dark",
+                  bg: "#090a0f",
+                  cardBg: "#11131a",
+                  userBubble: "linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)",
+                  aiBubble: "rgba(22, 27, 39, 0.9)",
+                  accent: "#38bdf8",
                   isLight: false,
                 },
                 {
                   id: "amethyst",
-                  name: "Neon Amethyst",
-                  mode: "Purple Dream",
-                  bg: "#0b0614",
-                  cardBg: "#140b22",
+                  name: "Twilight Amethyst",
+                  mode: "Deep Velvet",
+                  bg: "#0c0a14",
+                  cardBg: "#141021",
                   userBubble: "linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)",
-                  aiBubble: "rgba(36, 21, 61, 0.9)",
-                  accent: "#a855f7",
+                  aiBubble: "rgba(32, 24, 52, 0.9)",
+                  accent: "#c084fc",
                   isLight: false,
                 },
                 {
                   id: "emerald",
-                  name: "Aurora Emerald",
-                  mode: "Cyber Forest",
-                  bg: "#05100d",
-                  cardBg: "#0a1b16",
+                  name: "Nordic Emerald",
+                  mode: "Jade Forest",
+                  bg: "#06110e",
+                  cardBg: "#0b1c18",
                   userBubble: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-                  aiBubble: "rgba(18, 44, 36, 0.9)",
-                  accent: "#10b981",
+                  aiBubble: "rgba(18, 44, 37, 0.9)",
+                  accent: "#34d399",
                   isLight: false,
                 },
               ].map((t) => (
@@ -892,6 +1403,111 @@ export default function SettingsPage() {
                   ))}
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Theme Save Preferences Action Card */}
+          <div
+            className="glass-panel"
+            style={{
+              padding: "24px 28px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "16px",
+              border: "1px solid var(--border-subtle)",
+              background: "linear-gradient(135deg, var(--bg-card) 0%, rgba(99, 102, 241, 0.04) 100%)",
+            }}
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: "14px", width: "100%" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
+                    <h3 style={{ fontSize: "1.05rem", fontWeight: 700, margin: 0, color: "var(--text-main)" }}>
+                      Theme Save Preferences
+                    </h3>
+                    <span
+                      style={{
+                        fontSize: "0.72rem",
+                        fontWeight: 600,
+                        padding: "2px 8px",
+                        borderRadius: "var(--radius-full)",
+                        backgroundColor: "rgba(16, 185, 129, 0.14)",
+                        color: "#10b981",
+                        border: "1px solid rgba(16, 185, 129, 0.25)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                    >
+                      <ShieldCheck size={12} />
+                      Cloud & Local Sync
+                    </span>
+                  </div>
+                  <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", margin: 0 }}>
+                    Persist your preferred color palette, typography, and chat bubble styles across devices and sessions.
+                  </p>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={handleResetAppearance}
+                    disabled={isSavingPreferences}
+                    className="btn-secondary"
+                    style={{ fontSize: "0.85rem", padding: "10px 16px", cursor: isSavingPreferences ? "not-allowed" : "pointer" }}
+                    title="Reset to default Pure Pearl White theme"
+                  >
+                    <RotateCcw size={15} />
+                    <span>Reset to White Default</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveAppearance}
+                    disabled={isSavingPreferences}
+                    className="btn-primary"
+                    style={{ fontSize: "0.85rem", padding: "10px 22px", cursor: isSavingPreferences ? "not-allowed" : "pointer" }}
+                  >
+                    {isSavingPreferences ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save size={16} />
+                        <span>Save Preferences</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {appearanceNotice && (
+                <div
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: "var(--radius-sm)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    backgroundColor:
+                      appearanceNotice.type === "success" ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)",
+                    border:
+                      appearanceNotice.type === "success"
+                        ? "1px solid rgba(16, 185, 129, 0.3)"
+                        : "1px solid rgba(239, 68, 68, 0.3)",
+                    color: appearanceNotice.type === "success" ? "#10b981" : "#ef4444",
+                    fontSize: "0.86rem",
+                    fontWeight: 500,
+                  }}
+                >
+                  {appearanceNotice.type === "success" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                  <span>{appearanceNotice.text}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1428,6 +2044,141 @@ export default function SettingsPage() {
                 <span>{triggeringCheckin ? "Sending Check-in..." : "Test Instant Check-in Now"}</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 5: Account & Security */}
+      {activeTab === "security" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          {passwordNotice && (
+            <div
+              style={{
+                padding: "12px 16px",
+                borderRadius: "var(--radius-md)",
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                backgroundColor:
+                  passwordNotice.type === "success"
+                    ? "rgba(16, 185, 129, 0.12)"
+                    : "rgba(239, 68, 68, 0.12)",
+                border:
+                  passwordNotice.type === "success"
+                    ? "1px solid rgba(16, 185, 129, 0.3)"
+                    : "1px solid rgba(239, 68, 68, 0.3)",
+                color: passwordNotice.type === "success" ? "#34d399" : "#f87171",
+              }}
+            >
+              {passwordNotice.type === "success" ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+              <span>{passwordNotice.text}</span>
+            </div>
+          )}
+
+          <div className="glass-panel" style={{ padding: "28px", maxWidth: "600px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+              <KeyRound size={20} color="var(--primary)" />
+              <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem", fontWeight: 700 }}>
+                Change Account Password
+              </h2>
+            </div>
+            <p style={{ color: "var(--text-muted)", fontSize: "0.88rem", marginBottom: "22px" }}>
+              Ensure your account is protected with a strong, distinct password.
+            </p>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setPasswordNotice(null);
+
+                if (newPassword.length < 6) {
+                  setPasswordNotice({ type: "error", text: "New password must be at least 6 characters." });
+                  return;
+                }
+
+                if (newPassword !== confirmPassword) {
+                  setPasswordNotice({ type: "error", text: "New passwords do not match." });
+                  return;
+                }
+
+                try {
+                  setSavingPassword(true);
+                  const res = await fetch("/api/auth/reset-password", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ currentPassword, newPassword }),
+                  });
+                  const data = await res.json();
+                  if (!res.ok) {
+                    throw new Error(data.error || "Failed to update password");
+                  }
+                  setPasswordNotice({ type: "success", text: "Password changed successfully!" });
+                  setCurrentPassword("");
+                  setNewPassword("");
+                  setConfirmPassword("");
+                } catch (err: any) {
+                  setPasswordNotice({ type: "error", text: err.message || "An error occurred" });
+                } finally {
+                  setSavingPassword(false);
+                }
+              }}
+              style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+            >
+              <div>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "6px" }}>
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  placeholder="Enter current password"
+                  className="input-field"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "6px" }}>
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  placeholder="Enter new password (min 6 characters)"
+                  className="input-field"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={6}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "6px" }}>
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  placeholder="Re-enter new password"
+                  className="input-field"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={6}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "10px" }}>
+                <button
+                  type="submit"
+                  disabled={savingPassword}
+                  className="btn-primary"
+                  style={{ padding: "10px 22px" }}
+                >
+                  {savingPassword ? "Updating..." : "Update Password"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

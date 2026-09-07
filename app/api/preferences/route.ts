@@ -21,7 +21,7 @@ export async function GET() {
     prefs = await prisma.userPreference.create({
       data: {
         userId: user.id,
-        theme: "midnight",
+        theme: "pearl",
         fontStyle: "sans",
         bubbleStyle: "modern",
       },
@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     },
     create: {
       userId: user.id,
-      theme: theme || "midnight",
+      theme: theme || "pearl",
       fontStyle: fontStyle || "sans",
       bubbleStyle: bubbleStyle || "modern",
     },

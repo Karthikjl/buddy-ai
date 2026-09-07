@@ -26,6 +26,34 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
+  if (user.status === "INACTIVE") {
+    return NextResponse.json(
+      { error: "Account is inactive. Please contact your administrator." },
+      { status: 403 }
+    );
+  }
+
+  // Enforce hourly rate limit if configured (> 0)
+  if (user.rateLimit > 0) {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const recentMessagesCount = await prisma.message.count({
+      where: {
+        role: "user",
+        createdAt: { gte: oneHourAgo },
+        session: { userId: user.id },
+      },
+    });
+
+    if (recentMessagesCount >= user.rateLimit) {
+      return NextResponse.json(
+        {
+          error: `Hourly rate limit exceeded (${user.rateLimit} messages/hour). Please wait or contact your administrator.`,
+        },
+        { status: 429 }
+      );
+    }
+  }
+
   try {
     const { sessionId, message, regenerate } = await req.json();
 

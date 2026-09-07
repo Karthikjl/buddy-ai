@@ -179,8 +179,8 @@ export default function DashboardPage() {
           style={{
             padding: "20px 24px",
             marginBottom: "32px",
-            background: "linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%)",
-            borderColor: "rgba(245, 158, 11, 0.3)",
+            background: "linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.05) 100%)",
+            borderColor: "rgba(245, 158, 11, 0.35)",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -191,23 +191,25 @@ export default function DashboardPage() {
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             <div
               style={{
-                width: "42px",
-                height: "42px",
+                width: "44px",
+                height: "44px",
                 borderRadius: "12px",
-                backgroundColor: "rgba(245, 158, 11, 0.2)",
-                color: "#f59e0b",
+                backgroundColor: "rgba(245, 158, 11, 0.18)",
+                border: "1px solid rgba(245, 158, 11, 0.3)",
+                color: "#d97706",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                flexShrink: 0,
               }}
             >
               <ShieldAlert size={22} />
             </div>
             <div>
-              <div style={{ fontWeight: 600, fontSize: "0.95rem", color: "#fde68a" }}>
+              <div style={{ fontWeight: 700, fontSize: "1rem", color: "var(--text-main)", marginBottom: "3px" }}>
                 No Active LLM API Key Configured
               </div>
-              <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
+              <div style={{ fontSize: "0.88rem", color: "var(--text-muted)", lineHeight: 1.4 }}>
                 Plug in your OpenAI, OpenRouter, Groq, or Ollama endpoint to experience real streaming intelligence.
               </div>
             </div>
@@ -217,13 +219,12 @@ export default function DashboardPage() {
             prefetch={false}
             className="btn-primary"
             style={{
-              background: "linear-gradient(135deg, #d97706 0%, #b45309 100%)",
-              fontSize: "0.85rem",
-              padding: "8px 16px",
+              fontSize: "0.88rem",
+              padding: "9px 18px",
             }}
           >
             <span>Set Up API Key</span>
-            <ArrowRight size={14} />
+            <ArrowRight size={15} />
           </Link>
         </div>
       ) : (

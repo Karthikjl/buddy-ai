@@ -10,8 +10,13 @@ datasource db {
 model User {
   id           String            @id @default(uuid())
   email        String            @unique
+  username     String?           @unique
   name         String?
   passwordHash String
+  role         String            @default("USER") // SUPER_ADMIN, ADMIN, USER
+  status       String            @default("ACTIVE") // ACTIVE, INACTIVE
+  mustResetPassword Boolean      @default(false)
+  rateLimit    Int               @default(60) // messages per hour (0 = unlimited)
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
 
@@ -25,6 +30,12 @@ model User {
   telegramChatId             String? @unique
   telegramPairCode           String? @unique
   telegramActiveCharacterId  String?
+}
+
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }
 
 model ApiKey {
@@ -112,7 +123,7 @@ model CompanionMemory {
 model UserPreference {
   id                String   @id @default(uuid())
   userId            String   @unique
-  theme             String   @default("midnight") // midnight, obsidian, cyber, rose, purewhite
+  theme             String   @default("pearl") // pearl, midnight, obsidian, amethyst, emerald
   fontStyle         String   @default("sans")     // sans, serif, mono
   bubbleStyle       String   @default("modern")   // modern, rounded, glass
   proactiveCheckins Boolean  @default(true)

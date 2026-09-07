@@ -29,7 +29,7 @@ export default function RootLayout({
             __html: `
               (function() {
                 try {
-                  var t = localStorage.getItem('buddyai_theme') || 'midnight';
+                  var t = localStorage.getItem('buddyai_theme') || 'pearl';
                   var f = localStorage.getItem('buddyai_font') || 'sans';
                   var b = localStorage.getItem('buddyai_bubble') || 'modern';
                   document.documentElement.setAttribute('data-theme', t);

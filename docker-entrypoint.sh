@@ -3,6 +3,9 @@ set -e
 
 echo "🚀 Initializing BuddyAi container..."
 
+# Ensure data directory exists for SQLite database persistence
+mkdir -p /app/data
+
 # Run database push to ensure SQLite database is up to date
 npx prisma db push --accept-data-loss
 
