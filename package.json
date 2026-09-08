@@ -3,10 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3005",
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
+    "setup": "prisma migrate deploy",
+    "postinstall": "npm run setup",
     "db:push": "prisma db push",
     "db:seed": "node prisma/seed.js",
     "db:studio": "prisma studio",
